@@ -186,9 +186,27 @@ wrong place can drop real values (the review queue lists them). Rules written fo
 catch junk on another (the hexagon rule on Doc 3). Providers differ in conventions (Gemini's
 0–1000 boxes silently broke its results until fixed).
 
-**With more time.** Read digital PDFs' text layer directly before any vision call; re-read regions
-the detector found but no model read; add example symbol images to the reader's prompt; train a
-small symbol detector, then a distilled open model, on reviewed labels.
+## Future steps
+
+**Cheapest wins first, then models** — every step judged on the same benchmark before it is kept.
+
+1. **Few-shot symbol examples** (days, cents per sheet). Add 3–5 reference crops to the tag reader's
+   prompt (U-bend PCV, relief-valve PCV, hexagon, diamond). Targets the main miss — shapes described
+   inconsistently; prompt caching keeps the repeated examples cheap.
+2. **Read digital PDFs' text layer directly** before any vision call — exact and free for exported drawings.
+3. **Grow the evaluation set.** The keys hold 37 values; every accept / reject / correct in the review
+   queue is a labelled example, so normal use builds the dataset.
+4. **Self-hosted vision model behind the existing interface** (e.g. Qwen2.5-VL), run on the same
+   benchmark. Its native high-resolution input could simplify tiling, and drawings stay on the
+   customer's network.
+5. **Fine-tune only the narrow visual skills** (tag reading on crops, telling symbol types apart) once
+   a few hundred reviewed examples exist. Categories stay in rules — editable live and explainable.
+   Hold out whole drawings, not crops, so the test is not leaked.
+
+**On security:** self-hosting keeps drawings off third-party servers, which matters for nuclear
+safety-related sheets — but you then own patching, access control and the model supply chain. A
+cloud-hosted model in the customer's own account with no data retention gives much of the same
+protection without running GPUs; the right choice depends on the customer's contract.
 
 ## Questions for you (the SMEs)
 
