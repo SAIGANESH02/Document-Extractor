@@ -44,6 +44,7 @@ STAGES = [
     ("C", "Detection", "Independent text detection — what did D miss?"),
     ("D", "Observe", "Per-tile symbol + tag observations"),
     ("T", "Tables", "Find tables, read each one cell by cell"),
+    ("V", "Verify", "Visual yes/no check for shape-defined categories"),
     ("E", "Resolve", "Dedupe, suppress, map to categories by rule"),
 ]
 PARALLEL = ("C", "D", "T")
@@ -83,6 +84,8 @@ class RunConfig:
     # Load whatever is saved for this page and call no model at all: what the
     # viewer does when a page is opened, so saved results show up immediately.
     cache_only: bool = False
+    # Layer V: the model that answers yes/no questions about cropped symbols.
+    model_v: str = ""
 
     def __post_init__(self):
         self.model_b = self.model_b or os.environ.get("LAYER_B_MODEL") or DEFAULT_FLAGSHIP
@@ -90,6 +93,7 @@ class RunConfig:
         # Tables: Sonnet 5 read all 62 checked cells right on both benchmark runs;
         # Opus read the drain-valve V's as Y every time (data/bench/benchmark.md).
         self.model_t = self.model_t or DEFAULT_TABLE_MODEL
+        self.model_v = self.model_v or DEFAULT_FLAGSHIP
 
     def d_label(self) -> str:
         if self.d_mode == "cascade":
@@ -544,6 +548,52 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
     observations = results["D"].get("observations", [])
     tables = results["T"].get("tables", [])
 
+    # ---- V: visual checks for shape-defined categories -----------------------------
+    from pipeline import verify as Vf
+    from pipeline.resolve import load_rules
+    rules_now = load_rules()
+    verdicts: dict = {}
+    needs = observations and any(r.get("verify") for r in rules_now.get("rules", []))
+    if not needs:
+        yield emit("V", status="pending", note="no visual checks needed" if observations else "needs Layer D observations")
+    elif not has_key_for(cfg.model_v) and not cfg.cache_only:
+        verdicts = Vf.verdicts_for(page, cfg.model_v, rules_now)
+        yield emit("V", status="blocked", note=f"no API key for {cfg.model_v} — using saved answers / wording rule")
+    else:
+        t = time.time()
+        yield emit("V", status="running", note=f"checking candidates · {cfg.model_v}")
+        vq: queue.Queue = queue.Queue()
+        vres: dict = {}
+
+        def vwork():
+            try:
+                vres["v"], vres["r"] = Vf.run(page, img, observations, rules_now, cfg.model_v, cfg.cache_only,
+                                              on_progress=lambda d, n: vq.put((d, n)))
+            except Exception as exc:  # noqa: BLE001
+                vres["e"] = exc
+            finally:
+                vq.put(None)
+
+        threading.Thread(target=vwork, daemon=True).start()
+        while (item := vq.get()) is not None:
+            yield emit("V", status="running", note=f"{item[0]}/{item[1]} symbols checked · {cfg.model_v}",
+                       data={"progress": item[0] / item[1]})
+        if "e" in vres:
+            verdicts = Vf.verdicts_for(page, cfg.model_v, rules_now)
+            yield emit("V", status="error", note=f"{vres['e']}"[:140] + " — using wording rule")
+        else:
+            verdicts, rep = vres["v"], vres["r"]
+            yes = sum(1 for v in verdicts.values() if v.get("answer") == "yes")
+            missing = rep["candidates"] - len(verdicts)
+            note = (f"{rep['candidates']} symbols · {yes} yes · {len(verdicts) - yes} no/unclear · "
+                    f"{rep['asked']} asked, {rep['cached']} from cache")
+            if missing and cfg.cache_only:
+                note += f" · {missing} not checked yet — press Run"
+            yield emit("V", status="error" if rep["errors"] else "done",
+                       seconds=round(time.time() - t, 2), note=note,
+                       data={"verdicts": verdicts, "errors": rep["errors"], "cached": rep["asked"] == 0})
+        yield stats_event()
+
     # ---- E: resolve (deterministic) -----------------------------------------------------
     resolved: dict = {}
     if not observations:
@@ -553,7 +603,7 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
         yield emit("E", status="running")
         try:
             from pipeline.resolve import resolve
-            resolved = resolve(observations, ctx)
+            resolved = resolve(observations, ctx, rules_now, verdicts)
             a = resolved["audit"]
             yield emit("E", status="done", seconds=round(time.time() - t, 2),
                        note=(f"{len(resolved['answers'])} categories · {a['resolved']} kept "

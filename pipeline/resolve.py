@@ -74,7 +74,11 @@ def _inside(bbox, region) -> bool:
     return region[0] <= cx <= region[2] and region[1] <= cy <= region[3]
 
 
-def resolve(observations: list[dict], ctx: dict, rules: dict | None = None) -> dict:
+def resolve(observations: list[dict], ctx: dict, rules: dict | None = None,
+            verdicts: dict | None = None) -> dict:
+    """`verdicts` are Layer V's visual yes/no answers for rules with a `verify`
+    block; without them those rules fall back to their wording test."""
+    from pipeline import verify as V
     rules = rules or load_rules()
     legend_codes = {str(p.get("code", "")).strip().upper()
                     for p in ctx.get("system_prefixes", []) if p.get("code")}
@@ -109,7 +113,7 @@ def resolve(observations: list[dict], ctx: dict, rules: dict | None = None) -> d
     answers: dict[str, list[str]] = {}
     provenance: dict[str, list[dict]] = {}
 
-    def add(cat: str, val: str, obs: dict, rule_idx: int):
+    def add(cat: str, val: str, obs: dict, rule_idx: int, check: dict | None = None):
         val = _norm(val, ncfg)
         if not val:
             return
@@ -119,7 +123,7 @@ def resolve(observations: list[dict], ctx: dict, rules: dict | None = None) -> d
             provenance.setdefault(cat, []).append(
                 {"value": val, "bbox": obs["bbox"], "text": obs.get("text"),
                  "symbol": obs.get("symbol"), "confidence": obs.get("confidence"),
-                 "tile_id": obs.get("tile_id"), "rule": rule_idx}
+                 "tile_id": obs.get("tile_id"), "rule": rule_idx, "visual_check": check}
             )
 
     claimed: set[int] = set()
@@ -132,10 +136,17 @@ def resolve(observations: list[dict], ctx: dict, rules: dict | None = None) -> d
                 continue
             if rule.get("unless") and _any_match(o, rule["unless"]):
                 continue
+            seen = V.passes(rule, o, verdicts)
+            if seen is False or (seen is None and rule.get("verify") and not V.fallback(rule, o)):
+                continue
             claimed.add(oi)
             mode, text = rule.get("emit", "text"), o.get("text", "")
+            check = (verdicts or {}).get(V._key(cat, text)) if rule.get("verify") else None
+            if check:
+                check = {"answer": check.get("answer"), "evidence": check.get("evidence"),
+                         "model": check.get("model")}
             if mode == "text":
-                add(cat, text, o, i)
+                add(cat, text, o, i, check)
             elif mode == "const":
                 add(cat, rule["value"], o, i)
             elif mode == "split":

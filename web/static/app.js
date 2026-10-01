@@ -361,6 +361,8 @@ function selectAnswer(cat, i, el){
       <dt>symbol</dt><dd style="font-size:11.5px">${esc(p.symbol || '')}</dd>
       <dt>read conf</dt><dd>${p.confidence?.toFixed(2) ?? '—'}</dd>
       <dt>rule</dt><dd>RULES.yaml #${p.rule}</dd>
+      ${p.visual_check ? `<dt>visual check</dt><dd><b>${esc(p.visual_check.answer)}</b> · ${esc(p.visual_check.evidence||'')}
+        <span class="hint">(${esc(p.visual_check.model||'')})</span></dd>` : ''}
       <dt>page xy</dt><dd>${x0}, ${y0}</dd>
       <dt>tile</dt><dd>${p.tile_id ?? '—'}</dd>
     </dl>
@@ -423,6 +425,8 @@ const LAYER_IO = {
       does:'The reader. Reports only what it SEES and is forbidden from naming answer-key categories, so adding a category never means re-running this expensive stage.'},
   T: {in:'The whole page (to find tables), then each table cropped at full resolution', out:'Every table, cell by cell (CSV + Markdown)',
       does:'Runs on any sheet: one call lists the data tables (none → done), then one call per table reads every cell exactly. Runs in parallel with C and D because it needs nothing from them.'},
+  V: {in:'Each candidate symbol, cropped at full resolution and outlined in red', out:'yes / no / unclear + the visible evidence, per tag',
+      does:'For categories defined by a drawn shape (a PCV whose stem ends on a U-bend), the model is shown the symbol itself and asked one yes/no question, instead of matching words in its earlier description. Answers are cached; without one, the rule falls back to its wording test.'},
   E: {in:'Observations, sheet context and RULES.yaml', out:'Answer-key shaped values with provenance',
       does:'Deterministic: no model, no network, about 0.15s. Drops low confidence, suppresses note/legend regions, de-duplicates tile seams, then maps observations to categories by rule. Every value traces back to one observation and one rule.'},
 };
@@ -616,7 +620,7 @@ window.addEventListener('keydown', e => {
 
 /* ---------- live AI stats ---------- */
 const money = v => v == null ? '—' : '$' + (v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(3));
-const LAYER_NAME = {B:'B · sheet context', D:'D · observe', T:'T · tables', R:'R · rule assistant'};
+const LAYER_NAME = {B:'B · sheet context', D:'D · observe', T:'T · tables', V:'V · visual checks', R:'R · rule assistant'};
 let lastStats = null, showCalls = false;
 function renderStats(st){
   lastStats = st;

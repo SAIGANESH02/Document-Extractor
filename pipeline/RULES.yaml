@@ -32,19 +32,24 @@ rules:
 
   - category: pressure_control_valves (U-bend_pipe)
     source: drawing inspection + answer-key category name
-    note: 'A PCV bubble whose stem ends at a U-bend loop in the pipe run. Keyed on the drawn
-      shape, not the PCV prefix: Doc 2 has many relief-valve PCVs that are not in this category.
-      SME question: is the U-bend the defining feature? The U-bend must be where the stem ENDS:
-      readings that only use it as a landmark (''regulator ... left of the U-bend loop'') are
-      excluded — on Doc 2 those were PCV2769/2770/2771, none in the key. Tested: Doc 1 stays
-      100%, Doc 2 recall unchanged, 3 false positives removed.'
+    note: 'A PCV bubble whose stem ends on a U-bend loop in the pipe. Checked visually (Layer
+      V): every PCV bubble is cropped and the model is asked this one question, because matching
+      words in Layer D''s prose failed both ways on Doc 2 (landmark mentions counted; an unmentioned
+      U-bend was missed). Without a visual answer, the old wording test applies. SME question:
+      is the U-bend the defining feature?'
     when:
-      text: ^PCV
-      attached_to: u-?bend|u-?shaped|loop
-    unless:
-      attached_to: (left|right) of the u-?bend|near the u-?bend|feeding the u-?bend|before the
-        u-?bend|upstream of the u-?bend
+      text: ^PCV\s*-?\d
+      kind: instrument_bubble
     emit: text
+    verify:
+      question: Does this instrument bubble's stem or leader line end on a U-shaped loop (U-bend)
+        drawn in the pipe run? Answer no if it ends on a valve body, regulator, actuator, plain
+        pipe or anything else, even if a U-bend is nearby.
+      fallback_when:
+        attached_to: u-?bend|u-?shaped|loop
+      fallback_unless:
+        attached_to: (left|right) of the u-?bend|near the u-?bend|feeding the u-?bend|before
+          the u-?bend|upstream of the u-?bend
 
   - category: continuation_connections (hexagon)
     source: sheet legend (hexagon = continuation connection)
