@@ -34,10 +34,16 @@ rules:
     source: drawing inspection + answer-key category name
     note: 'A PCV bubble whose stem ends at a U-bend loop in the pipe run. Keyed on the drawn
       shape, not the PCV prefix: Doc 2 has many relief-valve PCVs that are not in this category.
-      SME question: is the U-bend the defining feature?'
+      SME question: is the U-bend the defining feature? The U-bend must be where the stem ENDS:
+      readings that only use it as a landmark (''regulator ... left of the U-bend loop'') are
+      excluded — on Doc 2 those were PCV2769/2770/2771, none in the key. Tested: Doc 1 stays
+      100%, Doc 2 recall unchanged, 3 false positives removed.'
     when:
       text: ^PCV
       attached_to: u-?bend|u-?shaped|loop
+    unless:
+      attached_to: (left|right) of the u-?bend|near the u-?bend|feeding the u-?bend|before the
+        u-?bend|upstream of the u-?bend
     emit: text
 
   - category: continuation_connections (hexagon)
