@@ -3,7 +3,7 @@
 ## What we're building
 
 A pipeline that reads a scanned engineering drawing and returns its contents as structured data —
-**Doc 1: 100% recall, Doc 2: 75%, and every cell of Doc 3's tables right** — with each value traceable
+**Doc 1: 100% recall, Doc 2: 100%, and every cell of Doc 3's tables right** — with each value traceable
 to the pixels and the rule that produced it.
 
 **The problem.** The three Seabrook Station sheets are 5088 × 3296 px scans with no text layer. Tags
@@ -105,6 +105,14 @@ wrote*, and adjusting the rule — never the value.
 | Spacing | Stop squeezing spaces out of multi-word values | **97.0%** | 50% | No |
 | Prompt: one bubble, one tag | Read `PCV` over `2829` as one tag; stop nudging the model toward "U-bend" | **100%** | 50% | Yes |
 | Connector letter | Keep the letter in the arrow head: `Z 20350` → `Z20350` | 100% | **75%** | No |
+| Visual check (Layer V) | Crop each PCV bubble and ask: does its stem end on a U-bend loop? | 100% | **100%** | Yes ($0.05–0.24/sheet) |
+
+**The visual check replaced word-matching for a shape-defined category.** The U-bend rule used to
+match words in the model's description, so landmark mentions ("left of the U-bend loop") counted and
+`PCV2829`, described without a U-bend, was missed. Layer V outlines each PCV bubble in red on a
+full-resolution crop and asks one yes/no question; it found `PCV2829`. It also says yes for six PCVs
+the key does not list (`PCV2768`–`2771`, `2826`, `2827`) — each stem ends on a U-shaped element
+labelled "VAR. PRESS. REG. ELEMENT", a sharper question for the SMEs.
 
 The same rule fixes lifted every reader on the same saved readings (cascade 78.8% → 90.9%, GPT-5.5
 75.8% → 81.8%). Every rule change is re-scored on *both* keyed sheets before it is kept — the
@@ -127,7 +135,8 @@ Same rules, same legend read and same prompt for every setup; re-scored from sav
 | Claude Haiku 4.5 | 51.5% | 25% | 14 | 5.9% | $0.63 | 3 min |
 | Cascade, Gemini only | 93.9% | 50% | 26 | 56.4% | $3.53 | 12 min |
 
-*Exact matches* need no punctuation cleanup (the key writes `PID-1-SS_LR20519`; the drawing prints
+These Layer D numbers use the wording rule for U-bend PCVs; with the visual check (Layer V), Opus
+reaches 100% on Doc 2. *Exact matches* need no punctuation cleanup (the key writes `PID-1-SS_LR20519`; the drawing prints
 `PID-1-SS-LR20519`). *Coverage* is the share of text the independent detector found that the reader
 also reported; it also reflects box accuracy. Doc 2's key has 4 values, so one value is 25 points.
 
@@ -180,8 +189,8 @@ does ~94% of the job for under $0.30 a sheet.
 | Self-hosted open vision model | 1–2 days of setup; a GPU as a single point of failure in the demo | Deferred — one interface keeps the swap to one file |
 
 **Known failure modes.** V/Y, 0/O, 1/I in the CAD font — and the mistakes repeat within one model.
-Categories defined by a symbol depend on how the model describes it (`PCV2829` read correctly, stem
-described as reaching a regulator, so the U-bend rule misses it). Note/title boxes drawn in the
+Categories defined by a symbol depended on how the model describes it — for U-bend PCVs now handled
+by a visual yes/no check (Layer V), which other shape-defined categories could reuse. Note/title boxes drawn in the
 wrong place can drop real values (the review queue lists them). Rules written for one sheet may
 catch junk on another (the hexagon rule on Doc 3). Providers differ in conventions (Gemini's
 0–1000 boxes silently broke its results until fixed).
@@ -212,7 +221,7 @@ protection without running GPUs; the right choice depends on the customer's cont
 
 | Open point | What the pipeline does | Why this is the safer choice |
 | --- | --- | --- |
-| What defines `pressure_control_valves (U-bend_pipe)` | A PCV whose stem reaches a U-bend loop in the pipe | The category is named after the U-bend; loosening the rule to catch Doc 2's one miss would be fitting to Doc 2 |
+| What defines `pressure_control_valves (U-bend_pipe)` | A PCV whose stem ends on a U-bend loop, checked visually on a crop of each bubble (Layer V) | The category is named after the U-bend; loosening the rule to catch Doc 2's one miss would be fitting to Doc 2 |
 | `instrument_bubbles` | The prefix types on the sheet (PI, TI, PCV), not instances | Matches Doc 1's key exactly |
 | Connector letters (`A/X/Y/Z 20350`) | Emit every connector with its letter | Keeps recall; extra values go to review instead of guessing why the key lists only Z |
 | Title-block and revision tables | **Read them too, labelled** (title block / revision / reference list; a setting turns this off) | For "every table exactly", a missing table fails and a labelled extra one costs cents |

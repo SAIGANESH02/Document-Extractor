@@ -1,7 +1,7 @@
 # Xmentium — Write-up (one page)
 
 **The pipeline reads a scanned drawing and returns answer-key JSON plus every table — Doc 1 at 100%
-recall, Doc 2 at 75%, Doc 3's tables 62/62 cells — with each value traced to its pixels and rule.**
+recall, Doc 2 at 100%, Doc 3's tables 62/62 cells — with each value traced to its pixels and rule.**
 Full version with diagrams and benchmarks: `WRITEUP.md`.
 
 ## Approach
@@ -28,6 +28,9 @@ is the headline, precision is a lower bound, and extra values go to a review que
 | GPT-5.5 | 87.9% | 75% | $10.49 |
 | Cascade (2 cheap readers + judge) | 93.9% | 50% | $3.53 |
 
+With the **visual check (Layer V)** — each PCV bubble cropped and asked "does its stem end on a U-bend?"
+— Opus reaches **100% on Doc 2** (found `PCV2829`, $0.24); the table uses the older wording rule.
+
 **Recommended:** Opus 5 for tags; tables read twice (Sonnet 5 + Gemini Flash) and voted cell by cell, Gemini Pro breaking ties —
 62/62 on Doc 3 (one reader repeats its mistakes: Opus read `V523` as `Y523`); Opus 5 for the legend. About $3–6 per sheet; Gemini Flash does ~94% of the tag job at 1/20th the cost.
 
@@ -38,7 +41,7 @@ own confidence (right and junk both ~0.88) · the cascade (readers agreed on 42%
 same recall) · PaddleOCR's fast detector (missed hexagons) · self-hosting for the demo (setup time, GPU risk).
 
 **Failure modes:** V/Y and 0/O confusion, repeated within one model · symbol-defined categories depend
-on the model's wording (`PCV2829` read right, its U-bend not described) · a misplaced note box can drop
+on the model's wording (U-bend PCVs now checked visually instead) · a misplaced note box can drop
 real values (listed in review) · a rule written for one sheet can catch junk on another.
 
 ## Next steps
