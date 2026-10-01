@@ -34,6 +34,11 @@ from pipeline.paths import CACHE, RENDERS, RUNS
 
 RENDER_DPI = 300
 SCAN_COVERAGE = 0.90          # an embedded image covering ≥90% of the page is a scan
+# A page with NO text layer whose largest image covers at least half the page is
+# also a scan — e.g. a landscape drawing placed rotated, with margins, on a
+# portrait letter page (68% coverage). Rendering that page instead turned the
+# exam sheet sideways at half resolution.
+SCAN_COVERAGE_NO_TEXT = 0.50
 IMAGE_TYPES = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 DOC_TYPES = {".pdf"} | IMAGE_TYPES
 
@@ -61,10 +66,12 @@ def _clear_page(n: int) -> None:
 def _page_pixmap(doc: fitz.Document, page: fitz.Page) -> tuple[fitz.Pixmap, str]:
     """The page's own scanned raster when one image covers the page; else a render."""
     area = page.rect.width * page.rect.height
+    no_text = not page.get_text().strip()
     for img in page.get_images(full=True):
         rects = page.get_image_rects(img[0])
         covered = max((r.width * r.height for r in rects), default=0)
-        if area and covered / area >= SCAN_COVERAGE:
+        share = covered / area if area else 0
+        if share >= SCAN_COVERAGE or (no_text and share >= SCAN_COVERAGE_NO_TEXT):
             pix = fitz.Pixmap(doc, img[0])
             if pix.n - pix.alpha >= 4:          # CMYK → RGB so PNG can hold it
                 pix = fitz.Pixmap(fitz.csRGB, pix)

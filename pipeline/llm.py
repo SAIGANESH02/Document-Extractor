@@ -118,6 +118,15 @@ def has_key() -> bool:
     return bool(os.environ.get(var))
 
 
+class Truncated(ValueError):
+    """The model ran out of output budget mid-answer. Billed, but unusable;
+    retrying with the same budget fails the same way."""
+
+    def __init__(self, message: str, usage: dict | None = None):
+        super().__init__(message)
+        self.usage = usage or {}
+
+
 def box_scale(model: str | None, width: int, height: int) -> tuple[float, float]:
     """Multipliers that turn a model's box coordinates into pixels of the image
     it was shown. Gemini returns boxes on a 0-1000 scale whatever the image
@@ -222,8 +231,11 @@ def ask_json(
             data, usage = _ask_anthropic(img, prompt, schema, max_tokens=max_tokens,
                                          effort=effort, system=system, model=model)
     except Exception as exc:
+        u = getattr(exc, "usage", {}) or {}
         stats.record({**entry, "status": "error", "latency": round(time.time() - t0, 2),
-                      "error": f"{type(exc).__name__}: {exc}"[:160]})
+                      "error": f"{type(exc).__name__}: {exc}"[:160],
+                      "input_tokens": u.get("input_tokens", 0), "output_tokens": u.get("output_tokens", 0),
+                      "cost": cost(model, u) if u and model in CATALOG else None})
         raise
     stats.record({**entry, "status": "ok", "latency": round(time.time() - t0, 2),
                   "ttft": usage.get("ttft"),
@@ -267,11 +279,11 @@ def _ask_anthropic(img, prompt, schema, *, max_tokens, effort, system, model=Non
 
     if msg.stop_reason == "max_tokens":
         # See gotcha 3 — do not let this reach json.loads(), where it becomes
-        # an unrecognisable "Unterminated string".
-        raise ValueError(
-            f"response hit max_tokens={max_tokens} and was truncated mid-JSON; "
-            f"raise the budget for this call"
-        )
+        # an unrecognisable "Unterminated string". The call is still billed, so
+        # its usage travels with the error and is recorded.
+        raise Truncated(
+            f"response hit max_tokens={max_tokens} and was truncated mid-JSON",
+            {"input_tokens": msg.usage.input_tokens, "output_tokens": msg.usage.output_tokens})
     return json.loads(text_of(msg)), {
         "input_tokens": msg.usage.input_tokens,
         "output_tokens": msg.usage.output_tokens,

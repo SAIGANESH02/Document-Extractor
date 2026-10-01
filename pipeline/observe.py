@@ -201,6 +201,7 @@ def observe_tile(
     # not rare. Without this a single 529 silently costs a whole tile's worth of
     # the page — the kind of gap that is invisible until someone asks why a tag
     # is missing.
+    from pipeline.llm import Truncated
     interval = _limits(model)["min_interval"]
     for attempt in range(RETRIES):
         try:
@@ -211,6 +212,13 @@ def observe_tile(
                 tag={"layer": "D", "role": role, "tile": tile_id},
             )
             break
+        except Truncated:
+            # Too much on this tile for one answer. Retrying with the same
+            # budget fails identically at full price (it did, 9 times, on the
+            # exam sheet). Read the tile as four overlapping quarters instead.
+            if tile.width < 500:
+                raise
+            return _observe_quarters(tile, box, ctx, tile_id, model, role)
         except Exception as exc:
             if attempt == RETRIES - 1:
                 raise
@@ -230,6 +238,22 @@ def observe_tile(
             o["model"] = model      # provenance: which reader saw this
         out.append(o)
     return out, usage
+
+
+def _observe_quarters(tile, box, ctx, tile_id, model, role):
+    w, h = tile.width, tile.height
+    hw, hh = int(w * 0.55), int(h * 0.55)          # 10% overlap so seam tags survive
+    out, totals = [], {"input_tokens": 0, "output_tokens": 0}
+    for qi, (x, y) in enumerate(((0, 0), (w - hw, 0), (0, h - hh), (w - hw, h - hh))):
+        sub = tile.crop((x, y, x + hw, y + hh))
+        sbox = (box[0] + x, box[1] + y, box[0] + x + hw, box[1] + y + hh)
+        got, u = observe_tile(sub, sbox, ctx, tile_id, model, role)
+        for o in got:
+            o["sub_tile"] = qi
+        out.extend(got)
+        totals["input_tokens"] += u.get("input_tokens", 0)
+        totals["output_tokens"] += u.get("output_tokens", 0)
+    return out, totals
 
 
 def observe_page(
