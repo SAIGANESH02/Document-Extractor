@@ -64,16 +64,17 @@ $('#upload').onchange = async e => {
   $('#doc').dispatchEvent(new Event('change'));
 };
 
-function runPipeline(force){
+function runPipeline(force, cacheOnly){
   page = +$('#doc').value;
   regions = []; tiles = []; suppress = []; sel = -1;
   observations = []; answers = {}; provenance = {}; scoreData = null; hlBox = null; selAns = null;
-  renderList(); renderAnswers(); $('#insp').innerHTML = '<span class="hint">…</span>';
+  renderList(); renderAnswers(); $('#insp').innerHTML = '<span class="hint">Click a box or an answer to see the full-resolution pixels it came from.</span>';
   $('#run').disabled = $('#rerun').disabled = true;
   $('#empty').style.display = 'none';
 
   tablesData = []; renderTables(); renderStats(null);
-  const es = new EventSource(`/api/run?page=${page}&force=${force?1:0}&${runConfig()}`);
+  if (window.__es) window.__es.close();          // switching pages ends the previous stream
+  const es = window.__es = new EventSource(`/api/run?page=${page}&force=${force?1:0}&cache_only=${cacheOnly?1:0}&${runConfig()}`);
   es.onmessage = e => {
     const ev = JSON.parse(e.data);
     if (ev.type === 'init'){
@@ -862,5 +863,11 @@ function renderReaders(){
   });
 })();
 
-loadDocs().then(() => { $('#doc').onchange(); resize(); });
+// Opening or switching a page shows everything already saved for it, without
+// calling any model; Run computes whatever is missing.
+$('#doc').addEventListener('change', () => runPipeline(false, true));
+// Switching the model or mode shows that setup's saved results at once — free.
+for (const id of ['#mB', '#mSingle', '#mT', '#mMode', '#mLightA', '#mLightB', '#mFlag', '#useCascade'])
+  $(id).addEventListener('change', () => { if (page) runPipeline(false, true); });
+loadDocs().then(() => { $('#doc').onchange(); resize(); runPipeline(false, true); });
 loadModels();

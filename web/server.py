@@ -251,7 +251,8 @@ def api_run():
                     light_a=a.get("light_a") or DEFAULT_LIGHT_PAIR[0],
                     light_b=a.get("light_b") or DEFAULT_LIGHT_PAIR[1],
                     flagship=a.get("flagship") or DEFAULT_FLAGSHIP,
-                    model_t=a.get("model_t", ""))
+                    model_t=a.get("model_t", ""),
+                    cache_only=a.get("cache_only") == "1")
 
     def stream():
         try:

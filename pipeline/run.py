@@ -80,6 +80,9 @@ class RunConfig:
     # on one crop), so two different readers catch what one strong reader repeats.
     model_t2: str = "gemini-3.8-flash"
     model_t3: str = "gemini-3.1-pro-preview"
+    # Load whatever is saved for this page and call no model at all: what the
+    # viewer does when a page is opened, so saved results show up immediately.
+    cache_only: bool = False
 
     def __post_init__(self):
         self.model_b = self.model_b or os.environ.get("LAYER_B_MODEL") or DEFAULT_FLAGSHIP
@@ -151,6 +154,17 @@ def _obs_path(page: int, cfg: RunConfig) -> Path:
     return CACHE / f"page{page}_observations__{_obs_slug(cfg)}.json"
 
 
+def _older_version(path: Path, prefix: str) -> Path | None:
+    """The newest saved result for the same page and model(s) made under an
+    earlier prompt or reader version. Shown — labelled as older — rather than
+    hidden: results already paid for stay visible; Re-run fresh replaces them."""
+    if path.exists():
+        return path
+    olds = sorted((f for f in CACHE.glob(prefix + "*.json") if f != path),
+                  key=lambda f: f.stat().st_mtime, reverse=True)
+    return olds[0] if olds else None
+
+
 def _cached_observations(path: Path) -> tuple[list[dict], dict] | None:
     """(observations, meta) or None. A partial cache is kept AND labelled —
     discarding fourteen good tiles because one failed wastes real money, and
@@ -187,7 +201,8 @@ def _cost_then(meta: dict, model: str) -> float | None:
 Put = Callable[..., None]
 
 
-def _layer_c(page: int, img: Image.Image, tiles, force: bool, put: Put, out: dict) -> None:
+def _layer_c(page: int, img: Image.Image, tiles, force: bool, cache_only: bool,
+             put: Put, out: dict) -> None:
     t = time.time()
     hit = None if force else _cached_regions(page)
     if hit:
@@ -196,6 +211,9 @@ def _layer_c(page: int, img: Image.Image, tiles, force: bool, put: Put, out: dic
         put("C", status="done", seconds=0.0,
             note=f"{len(hit[0])} regions · from cache, saved {st['cached_at']}",
             data={"regions": hit[0], **st})
+        return
+    if cache_only:
+        put("C", status="pending", note="not saved for this page yet — press Run")
         return
     put("C", status="running", note=f"0/{len(tiles)} tiles")
     from pipeline.detect import dedupe
@@ -220,7 +238,12 @@ def _layer_d(page: int, img: Image.Image, tiles, ctx: dict, cfg: RunConfig, forc
     if missing:
         put("D", status="blocked", note=f"no API key for {', '.join(missing)}")
         return
-    path = _obs_path(page, cfg)
+    exact = _obs_path(page, cfg)
+    base = exact.name.rsplit("--p", 1)[0]          # same page + model(s), any prompt version
+    path = (None if force else _older_version(exact, f"page{page}_observations__{base}")) or exact
+    if path == exact and not exact.exists() and cfg.d_mode == "single":
+        legacy = CACHE / f"page{page}_observations__{_slug(cfg.model_d)}.json"
+        path = legacy if legacy.exists() and not force else exact
     hit = None if force else _cached_observations(path)
     if hit and hit[1].get("tiles_failed"):
         # A partial cache must not become a ceiling: re-run to try to better it.
@@ -230,12 +253,16 @@ def _layer_d(page: int, img: Image.Image, tiles, ctx: dict, cfg: RunConfig, forc
         st = _stamp(path)
         then = _cost_then(meta, cfg.model_d) if cfg.d_mode == "single" else meta.get("cost_total")
         out.update(observations=obs, meta=meta, cached=True, cost_then=then)
+        older = " · OLDER PROMPT VERSION — Re-run fresh to update" if path != exact else ""
         put("D", status="done", seconds=0.0,
-            note=f"{len(obs)} observations · {cfg.d_label()} · from cache, saved {st['cached_at']}",
+            note=f"{len(obs)} observations · {cfg.d_label()} · from cache, saved {st['cached_at']}{older}",
             data={"observations": obs, "meta": meta, "cost_then": then,
                   "errors": meta.get("error_messages", []), **st})
         return
 
+    if cfg.cache_only:
+        put("D", status="pending", note=f"not saved for {cfg.d_label()} yet — press Run")
+        return
     t = time.time()
     put("D", status="running", note=f"0/{len(tiles)} tiles · {cfg.d_label()}")
     try:
@@ -303,14 +330,23 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
     scope = "" if cfg.include_admin_tables else "--dataonly"
     readers = "+".join(_slug(m) for m in (cfg.model_t, cfg.model_t2, cfg.model_t3) if m)
     path = CACHE / f"page{page}_tables__{readers}{scope}--v3.json"
-    if path.exists() and not force:
+    found_path = None if force else _older_version(path, f"page{page}_tables__")
+    if found_path is not None:
+        older = found_path != path
+        path = found_path
         blob = json.load(open(path))
         st = _stamp(path)
+        if older:
+            st["cache_file"] += " (earlier table-reader version — Re-run fresh to update)"
         out["tables"] = blob["tables"]
+        out["cost_then"] = blob.get("cost")
         n = len(blob["tables"])
         put("T", status="done", seconds=0.0,
             note=(f"{n} table(s)" if n else "no tables on this sheet") + f" · from cache, saved {st['cached_at']}",
             data={"tables": blob["tables"], "errors": blob.get("errors", []), **st})
+        return
+    if cfg.cache_only:
+        put("T", status="pending", note="not saved for this page yet — press Run")
         return
     t = time.time()
     try:
@@ -348,7 +384,8 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
     except Exception as exc:  # noqa: BLE001
         put("T", status="error", note=str(exc)[:160])
         return
-    json.dump({"tables": tables, "errors": errors}, open(path, "w"), indent=1)
+    t_cost = (stats.snapshot()["layers"].get("T") or {}).get("cost")
+    json.dump({"tables": tables, "errors": errors, "cost": t_cost}, open(path, "w"), indent=1)
     outdir = RUNS / f"page{page}_tables"
     outdir.mkdir(exist_ok=True)
     for tb in tables:
@@ -429,14 +466,18 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
     # ---- B: sheet context -----------------------------------------------------------
     ctx_path = _ctx_path(page, cfg.model_b)
     ctx: dict = {}
+    b_cost_then = None
     if not has_key_for(cfg.model_b):
         yield emit("B", status="blocked", note=f"no API key for {cfg.model_b}")
     elif ctx_path.exists() and not force:
         ctx = json.load(open(ctx_path))
         st = _stamp(ctx_path)
+        b_cost_then = ctx.get("_cost")
         yield emit("B", status="done", seconds=0.0,
                    note=f"{ctx.get('sheet_id', '?')} · {cfg.model_b} · from cache, saved {st['cached_at']}",
                    data={"context": ctx, "model": cfg.model_b, **st})
+    elif cfg.cache_only:
+        yield emit("B", status="pending", note=f"not saved for {cfg.model_b} yet — press Run")
     else:
         t = time.time()
         yield emit("B", status="running", note=f"reading legend + notes · {cfg.model_b}")
@@ -444,6 +485,7 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
             from pipeline.sheet_context import sheet_context
             ctx, usage = sheet_context(img, cfg.model_b)
             ctx_path = CACHE / f"page{page}_context__{_slug(cfg.model_b)}.json"
+            ctx["_cost"] = cost(cfg.model_b, usage)
             json.dump(ctx, open(ctx_path, "w"), indent=1)
             yield emit("B", status="done", seconds=round(time.time() - t, 2),
                        note=(f"{ctx['sheet_id']} · {len(ctx['symbols'])} symbols · "
@@ -462,7 +504,7 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
         events.put(("stage", sid, kw))
 
     workers = {
-        "C": (_layer_c, (page, img, tiles, force)),
+        "C": (_layer_c, (page, img, tiles, force, cfg.cache_only)),
         "D": (_layer_d, (page, img, tiles, ctx, cfg, force)),
         "T": (_layer_t, (page, img, cfg, force, ctx)),
     }
@@ -530,8 +572,12 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
                            observations=observations if observations else None)
     cov = (scored.get("coverage") or {}).get("coverage")
     cached_costs = {}
+    if stages["B"].data.get("cached"):
+        cached_costs["B"] = b_cost_then
     if results["D"].get("cached"):
         cached_costs["D"] = results["D"].get("cost_then")
+    if stages["T"].data.get("cached"):
+        cached_costs["T"] = results["T"].get("cost_then")
     final_stats = {**stats.snapshot(), "cached_layers": cached_costs,
                    "wall_seconds": round(time.time() - t_run, 2)}
     yield {"type": "stats", "stats": final_stats}
@@ -567,6 +613,10 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
     # Persist: one timestamped file for history, one stable `latest` pointer.
     # Provenance, suppress zones, tables and per-call stats are dropped from the
     # stored copy so a history of runs stays small enough to keep forever.
+    if cfg.cache_only:
+        # Loading saved results is not a run: don't add it to the history.
+        yield {"type": "done", "summary": summary}
+        return
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     record = {k: v for k, v in summary.items()
               if k not in ("provenance", "suppress_regions", "tables", "unclassified")}
