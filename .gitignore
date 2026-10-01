@@ -1,0 +1,51 @@
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+.anthropic/
+.claude/settings.local.json
+
+# --- Private workspace: proposal, email drafts, notes, benchmark images ---
+claude-workspace/
+
+# --- Generated data: page renders, per-layer caches, run records, uploads ---
+data/
+
+# --- Pipeline outputs ---
+out/
+outputs/
+predictions/
+*.pred.json
+scores/
+
+# --- Source documents ---
+# take_home_documents.pdf and answer_key.json are committed on purpose.
+# Uploaded documents land in data/uploads/ and stay out.
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Node (if a viewer/UI is added) ---
+node_modules/
+dist/
+.next/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+

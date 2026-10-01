@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xmentium — Extraction Pipeline</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Xmentium <span>· extraction pipeline</span></h1>
+  <select id="doc"></select>
+  <label class="btn" title="Render a PDF into new pages at native resolution">Upload PDF<input type="file" id="upload" accept="application/pdf" hidden></label>
+  <button id="run" class="primary">Run</button>
+  <button id="rerun" title="Ignore cached detections and re-run Layer C">Re-run fresh</button>
+  <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dim);cursor:pointer">
+    <input type="checkbox" id="useCascade"> cascade</label>
+  <div class="spacer"></div>
+  <button id="fit">Fit</button>
+</header>
+
+<div class="rail" id="rail"></div>
+
+<main>
+  <div id="stage-wrap">
+    <canvas id="cv"></canvas>
+    <div class="empty" id="empty"><div style="font-size:30px">⌖</div>
+      <div>Pick a document and hit <b>Run</b></div></div>
+    <div class="hud">
+      <label><input type="checkbox" id="fSmall"> tags only <span style="color:var(--dim)">(&lt;40px)</span></label>
+      <label><input type="checkbox" id="fTiles"> tile grid</label>
+      <label><input type="checkbox" id="fObs"> layer D</label>
+      <label><input type="checkbox" id="fSupp" checked> suppress zones</label>
+      <label>conf ≥ <input type="range" id="fConf" min="0" max="100" value="0"><b id="fConfV" style="font-variant-numeric:tabular-nums">0.00</b></label>
+    </div>
+    <div class="statsbox" id="statsbox">
+      <div class="sbh"><b>Live AI stats</b><span id="sbTotal" class="hint"></span>
+        <button id="sbCalls" class="mini">calls</button><button id="sbToggle" class="mini">–</button></div>
+      <div id="sbBody"><span class="hint">No model calls yet.</span></div>
+    </div>
+    <div class="toast" id="toast" hidden></div>
+  </div>
+
+  <div id="splitter" title="Drag to resize"></div>
+
+  <aside>
+    <div class="tabs">
+      <div class="tab on" data-p="inspect">Inspect</div>
+      <div class="tab" data-p="layer">Layer</div>
+      <div class="tab" data-p="review">Review<span class="n" id="revN">–</span></div>
+      <div class="tab" data-p="readers">Readers<span class="n" id="rdN">–</span></div>
+      <div class="tab" data-p="tables">Tables<span class="n" id="tabN">–</span></div>
+      <div class="tab" data-p="rules">Rules<span class="n" id="ruleN">–</span></div>
+      <div class="tab" data-p="models">Models</div>
+    </div>
+
+    <div class="pane on" id="p-inspect">
+      <div class="sec">
+        <h2>Summary</h2>
+        <div class="stats" id="stats"><span class="hint">No run yet.</span></div>
+        <div id="readme" class="readme"></div>
+      </div>
+      <div class="sec">
+        <h2>Inspector</h2>
+        <div id="insp"><span class="hint">Click a box to see the native-resolution pixels it came from.</span></div>
+      </div>
+      <div class="sec" style="padding-bottom:6px"><h2 id="ansHdr">Answers</h2></div>
+      <div id="answers"><span class="hint" style="padding:8px;display:block">Layer E output appears here.</span></div>
+      <div class="sec" style="padding-bottom:6px;border-top:1px solid var(--line)"><h2 id="listHdr">Regions</h2></div>
+      <div id="list"></div>
+    </div>
+
+    <div class="pane" id="p-layer">
+      <div class="kvs" id="layerDetail">
+        <span class="hint">Click a layer in the rail above to see what it took in,
+        what it produced, and how long it took.</span>
+      </div>
+    </div>
+
+    <div class="pane" id="p-review">
+      <div class="sec" style="padding-bottom:9px">
+        <h2>Human review</h2>
+        <div class="stats" id="revStats"><span class="hint">Run a page, then reload this tab.</span></div>
+        <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">
+          <button id="revLoad">Load queue</button>
+          <button id="revExport">Export reviewed</button>
+        </div>
+      </div>
+      <div id="revList"></div>
+    </div>
+
+    <div class="pane" id="p-readers">
+      <div class="sec"><h2>Who read what (cascade)</h2>
+        <div class="hint">With the cascade on, two light models read every tile. This shows where they
+          agreed, where they disagreed, and how the flagship ruled. Click a row to see the pixels.
+          Tick "layer D" on the drawing to colour boxes: green agreed, purple ruled by the flagship,
+          orange unsettled.</div>
+        <div class="stats" id="rdStats" style="margin-top:8px"></div></div>
+      <div id="rdList"><span class="hint" style="padding:12px;display:block">Run a page with the cascade on
+        (header checkbox) to compare readers.</span></div>
+    </div>
+
+    <div class="pane" id="p-tables">
+      <div class="sec"><h2>Tables on this sheet</h2>
+        <div class="hint">Found by Layer T and read one table per call from a full-resolution crop.
+          Click a table to see where it sits on the sheet. Check cells against the crop — the target
+          is every cell exact.</div></div>
+      <div id="tablesList"><span class="hint" style="padding:12px;display:block">Run a page first.</span></div>
+    </div>
+
+    <div class="pane" id="p-rules">
+      <div class="sec">
+        <h2>Rule assistant</h2>
+        <div class="hint" style="margin-bottom:7px">The AI proposes rule changes for this sheet; you accept or
+          reject each one. Every proposal is test-run first, including on the sheets that have answer keys.</div>
+        <input id="ruleCats" class="txt" placeholder="categories wanted (optional, comma-separated)">
+        <div style="display:flex;gap:5px;margin-top:6px"><button id="ruleCheck">Check rules for this page</button></div>
+        <div id="ruleStatus" class="hint" style="margin-top:6px"></div>
+      </div>
+      <div id="ruleProps"></div>
+      <div class="sec" style="padding-bottom:4px"><h2>Current rules</h2></div>
+      <div id="ruleList"></div>
+      <div class="sec" style="padding-bottom:4px;border-top:1px solid var(--line)"><h2>Change history</h2></div>
+      <div id="ruleLog"></div>
+    </div>
+
+    <div class="pane" id="p-models">
+      <div class="kvs">
+        <h3>Layer B · sheet context</h3>
+        <div class="mrow"><label>model</label><select id="mB"></select></div>
+        <div class="hint" style="line-height:1.45">One call per sheet, and every later layer inherits its
+          mistakes (legend, note boxes, sheet id). Defaults to the strongest model: the call
+          costs about $0.10, so quality is cheap here.</div>
+        <h3>Layer D · observe</h3>
+        <div class="mrow"><label>mode</label><select id="mMode">
+          <option value="single">single model</option><option value="cascade">cascade</option></select></div>
+        <div class="mrow" id="rowSingle"><label>model</label><select id="mSingle"></select></div>
+        <h3>Layer T · tables</h3>
+        <div class="mrow"><label>model</label><select id="mT"></select></div>
+        <h3>Cascade settings</h3>
+        <div class="mrow"><label>light A</label><select id="mLightA"></select></div>
+        <div class="mrow"><label>light B</label><select id="mLightB"></select></div>
+        <div class="mrow"><label>flagship</label><select id="mFlag"></select></div>
+        <div id="pairWarn"></div>
+        <div class="hint" style="margin-top:10px;line-height:1.5">
+          Two light models read every tile. Where they agree the reading stands;
+          where they disagree the flagship is asked about just those spots.
+          Escalation is triggered by <b>disagreement</b>, not by self-reported
+          confidence — measured on this sheet, confidence does not separate right
+          from wrong (0.895 vs 0.864, junk at 0.88).
+        </div>
+        <div id="mNotes"></div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

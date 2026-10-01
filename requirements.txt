@@ -1,0 +1,18 @@
+# Layer C — independent text detection (CPU, no API)
+paddlepaddle==3.0.0
+paddleocr==3.0.0
+
+# Ingest / imaging
+pypdf==6.19.0
+pillow>=9.4
+numpy>=1.24,<2.0
+
+# Layer B/D — frontier vision reader
+anthropic>=0.69
+
+# Utilities
+pyyaml>=6.0
+
+# Viewer + PDF rendering
+flask>=3.0
+pymupdf>=1.24

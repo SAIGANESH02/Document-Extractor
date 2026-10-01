@@ -1,0 +1,214 @@
+# ---------------------------------------------------------------------------
+# Observation -> answer-key category mapping (Layer E).
+#
+# Layer D's observations are cached, so a change here re-runs Layer E in
+# milliseconds: no model calls, and every edit is explainable in one sentence.
+# Changes made through the viewer's rule assistant are versioned in
+# data/rules/history/ with a changelog in data/rules/changelog.json.
+#
+# Each rule:
+#   category : the answer-key category to emit under
+#   source   : where this knowledge came from (legend, requested category,
+#              drawing inspection, SME answer, review decision, rule assistant)
+#   note     : why the rule exists, in one or two sentences
+#   when     : ALL of these must match (case-insensitive regex, searched)
+#   unless   : NONE of these may match
+#   emit     : text     -> the observation's text verbatim (default)
+#              capture  -> first capture group of `pattern`
+#              split    -> split text on / | , and spaces; emit each token
+#                          (keep_legend_codes: only codes the sheet's legend defines)
+#              const    -> the literal `value`
+#              template -> `template` with {text} and {name}, where {name} is
+#                          group 1 of `pattern` searched in `pattern_field`
+#   min_conf : drop observations below this read confidence
+#
+# Rules run in order; one observation may satisfy several rules and is emitted
+# under each. That is deliberate: the answer key overlaps (PI2793 is under both
+# compound_gauge and pressure_indicators), so categories are views, not a
+# partition.
+# ---------------------------------------------------------------------------
+
+rules:
+
+  - category: pressure_control_valves (U-bend_pipe)
+    source: drawing inspection + answer-key category name
+    note: 'A PCV bubble whose stem ends at a U-bend loop in the pipe run. Keyed on the drawn
+      shape, not the PCV prefix: Doc 2 has many relief-valve PCVs that are not in this category.
+      SME question: is the U-bend the defining feature?'
+    when:
+      text: ^PCV
+      attached_to: u-?bend|u-?shaped|loop
+    emit: text
+
+  - category: continuation_connections (hexagon)
+    source: sheet legend (hexagon = continuation connection)
+    note: Keyed on the drawn hexagon, not Layer D's `kind`, which sometimes says boundary_interface.
+    when:
+      symbol: hexagon
+    unless:
+      text: ^\s*$
+    emit: text
+
+  - category: system_boundary_interfaces
+    source: sheet legend (diamond = system boundary interface)
+    note: Split diamond with codes like 'SS|CS'. Only codes the sheet's own legend defines are
+      kept, so legend prose split into words is not emitted.
+    when:
+      symbol: diamond
+    emit: split
+    keep_legend_codes: true
+
+  - category: valves
+    source: drawing inspection + answer-key category name
+    note: Gate/bowtie valve symbols tagged V<number>.
+    when:
+      kind: ^valve$
+      symbol: bowtie|gate valve
+      text: ^V\d+$
+    emit: text
+
+  - category: pressure_indicators
+    source: drawing inspection + answer-key category name
+    note: Instrument bubble tagged PI<number>.
+    when:
+      kind: instrument_bubble
+      text: ^PI\s*\d+
+    emit: capture
+    pattern: ^(PI\s*\d+)
+
+  - category: temperature_indicators
+    source: drawing inspection + answer-key category name
+    note: Instrument bubble tagged TI<number>.
+    when:
+      kind: instrument_bubble
+      text: ^TI\s*\d+
+    emit: capture
+    pattern: ^(TI\s*\d+)
+
+  - category: instrument_bubbles
+    source: drawing inspection + answer-key category name
+    note: 'The prefix types present on the sheet (PI, TI, PCV), not instances. SME question:
+      is that the right reading?'
+    when:
+      kind: instrument_bubble
+      text: ^[A-Z]{2,3}\s*\d
+    emit: capture
+    pattern: ^([A-Z]{2,3})\s*\d
+
+  - category: compound_gauge
+    source: drawing inspection + answer-key category name
+    note: Instrument the model describes as a compound gauge. Misses PI2793 on Doc 1 because
+      the model does not describe it that way.
+    when:
+      kind: instrument_bubble
+      attached_to: compound gauge
+    emit: capture
+    pattern: ^([A-Z]{2,3}\s*\d+)
+
+  - category: filters
+    source: drawing inspection + answer-key category name
+    note: Filter tags F-<number>.
+    when:
+      text: ^F-\d+$
+    emit: text
+
+  - category: vacuum_pumps
+    source: drawing inspection + answer-key category name
+    note: 'Pump tag P-<number>, captured anywhere: it is often read with its label (''VAC PUMP
+      P-392''). The word boundary stops ''CP-166A'' matching as ''P-166''.'
+    when:
+      text: \bP-\d+\b
+    emit: capture
+    pattern: \b(P-\d+)\b
+
+  - category: flexible_hoses
+    source: drawing inspection + answer-key category name
+    note: Flexible hose labels.
+    when:
+      text: FLEX\s*HOSE
+    emit: text
+
+  - category: gas_cylinders
+    source: drawing inspection + answer-key category name
+    note: Gas cylinder symbol with a label (e.g. NITROGEN).
+    when:
+      symbol: cylinder
+    unless:
+      text: ^\s*$
+    emit: text
+
+  - category: sample_panels
+    source: drawing inspection + answer-key category name
+    note: Panel name read as one string.
+    when:
+      text: SAMPLE PANEL
+    emit: text
+
+  - category: sample_panels
+    source: drawing inspection + answer-key category name
+    note: 'Panel tag read separately from its name: text ''CP-166A'', attached_to ''PRIMARY
+      SAMPLE PANEL''. The key wants them joined.'
+    when:
+      attached_to: SAMPLE PANEL
+      text: ^[A-Z]{1,3}-\d+[A-Z]?$
+    emit: template
+    pattern_field: attached_to
+    pattern: ((?:PRIMARY\s+)?SAMPLE\s+PANEL)
+    template: '{name} {text}'
+
+  - category: sample_sinks
+    source: drawing inspection + answer-key category name
+    note: Sink name read as one string.
+    when:
+      text: SAMPLE SINK
+    emit: text
+
+  - category: sample_sinks
+    source: drawing inspection + answer-key category name
+    note: Sink tag read separately from its name; joined as for panels.
+    when:
+      attached_to: SAMPLE SINK
+      text: ^[A-Z]{1,3}-\d+[A-Z]?$
+    emit: template
+    pattern_field: attached_to
+    pattern: ((?:PRIMARY\s+)?SAMPLE\s+SINK)
+    template: '{name} {text}'
+
+  - category: demineralized_water
+    source: drawing inspection + answer-key category name
+    note: Demineralized-water connection tags Z<number> (Doc 2).
+    when:
+      text: ^Z\d+$
+    emit: text
+
+  - category: demineralized_water
+    source: drawing inspection (Doc 2 connector labelled DEMINERALIZED WATER)
+    note: 'Off-page connector whose label says demineralized water. Emits the connector letter
+      in its arrow head plus the line number (''Z 20350'' -> Z20350): Doc 2 has four such connectors,
+      A/X/Y/Z 20350, and its key lists Z20350.'
+    when:
+      kind: continuation_connection
+      attached_to: DEMINERALI[SZ]ED
+    emit: capture
+    pattern: \b([A-Z]\s*\d{4,})
+
+  - category: tubing_sizes
+    source: drawing inspection + answer-key category name
+    note: Tubing size line labels like 1/4"-T.
+    when:
+      kind: line_label
+      text: ^\d+(/\d+)?"?\s*-\s*T$
+    emit: capture
+    pattern: ^(.+)$
+
+normalise:
+  strip: true
+  collapse_whitespace: false
+  join_tag_prefix: true
+  uppercase: false
+suppress_region_kinds:
+- notes
+- legend
+- title_block
+- revision_table
+min_confidence: 0.35
