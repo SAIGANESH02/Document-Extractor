@@ -168,7 +168,7 @@ does ~94% of the job for under $0.30 a sheet.
 | T · tables | Claude Sonnet 5 ($0.03) | Gemini 3.8 Flash ($0.006) | Both 62/62 on two reads; Opus misreads V as Y |
 | Cascade | Off | Off | Costs the sum of its readers; scored no better |
 
-## Tried and rejected, known failure modes, next steps
+## Tried and rejected, and known failure modes
 
 | Idea | What happened | Decision |
 | --- | --- | --- |
