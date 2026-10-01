@@ -21,9 +21,12 @@ predictions/
 *.pred.json
 scores/
 
-# --- Source documents ---
-# take_home_documents.pdf and answer_key.json are committed on purpose.
-# Uploaded documents land in data/uploads/ and stay out.
+# --- Source documents (client material: kept out of the public repo) ---
+# Place them in the project root to run and score; see README "Inputs".
+take_home_documents.pdf
+answer_key.json
+project_notes.md
+*.pdf
 
 # --- Python ---
 __pycache__/

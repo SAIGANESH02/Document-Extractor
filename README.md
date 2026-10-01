@@ -23,6 +23,14 @@ C, D and T run in parallel after B. See `WRITEUP.md` for the approach, results a
 
 All model calls go through `pipeline/llm.py:ask_json` (Anthropic, Gemini or OpenAI).
 
+## Inputs
+
+The drawings and answer key are client material and are not in this repository. To run on
+them, put the provided files in the project root:
+
+- `take_home_documents.pdf` — the three drawings (render with `scripts/render_pdf.py` or **Upload document**)
+- `answer_key.json` — enables scoring; without it every sheet is scored as "no answer key"
+
 ## Run
 
 ```bash
