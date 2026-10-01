@@ -31,7 +31,7 @@ cp .env.example .env                     # add API keys; LLM_PROVIDER=anthropic|
 .venv/bin/python web/server.py           # http://127.0.0.1:5001  (PORT=... to change)
 ```
 
-In the viewer: **Upload PDF** to add a document, **Run** to process a page
+In the viewer: **Upload document** (PDF — scanned or digital — or PNG/JPG/TIFF) to add pages, **Run** to process a page
 (cached stages are reused and labelled with when they were made),
 **Re-run fresh** to ignore all caches.
 

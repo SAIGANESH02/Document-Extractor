@@ -11,7 +11,7 @@
 <header>
   <h1>Xmentium <span>· extraction pipeline</span></h1>
   <select id="doc"></select>
-  <label class="btn" title="Render a PDF into new pages at native resolution">Upload PDF<input type="file" id="upload" accept="application/pdf" hidden></label>
+  <label class="btn" title="PDF (scanned or digital) or PNG / JPG / TIFF image">Upload document<input type="file" id="upload" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,application/pdf,image/png,image/jpeg,image/tiff" hidden></label>
   <button id="run" class="primary">Run</button>
   <button id="rerun" title="Ignore cached detections and re-run Layer C">Re-run fresh</button>
   <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dim);cursor:pointer">

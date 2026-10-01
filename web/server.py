@@ -23,7 +23,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipeline.paths import BENCH, CACHE, RENDERS, RUNS  # noqa: E402
 from pipeline.paths import DATA  # noqa: E402
-from pipeline.render import render_pdf  # noqa: E402
+from pipeline.render import DOC_TYPES, ingest  # noqa: E402
 from pipeline import rule_assistant, rules_store  # noqa: E402
 from pipeline.resolve import resolve  # noqa: E402
 from pipeline.run import RunConfig, list_pages, run  # noqa: E402
@@ -52,15 +52,19 @@ def documents():
 
 @app.post("/api/upload")
 def upload():
-    """Accept a PDF (e.g. the unseen Doc 4) and render it into new pages."""
-    f = request.files.get("pdf")
-    if f is None or not f.filename.lower().endswith(".pdf"):
-        return jsonify({"error": "upload a .pdf file"}), 400
+    """Accept a document (the unseen Doc 4): a PDF, scanned or digital, or a
+    PNG/JPG/TIFF image. Each page becomes a new page in the viewer."""
+    f = request.files.get("pdf") or request.files.get("file")
+    if f is None or Path(f.filename).suffix.lower() not in DOC_TYPES:
+        return jsonify({"error": f"upload one of: {', '.join(sorted(DOC_TYPES))}"}), 400
     uploads = DATA / "uploads"
     uploads.mkdir(parents=True, exist_ok=True)
     dest = uploads / Path(f.filename).name
     f.save(dest)
-    return jsonify({"pages": render_pdf(dest)})
+    try:
+        return jsonify({"pages": ingest(dest)})
+    except Exception as exc:  # noqa: BLE001 — an unreadable file must say why
+        return jsonify({"error": f"could not read {f.filename}: {exc}"}), 400
 
 
 @app.get("/api/page/<int:page>.png")

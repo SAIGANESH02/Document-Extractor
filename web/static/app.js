@@ -56,7 +56,7 @@ async function loadDocs(select){
 
 $('#upload').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  const fd = new FormData(); fd.append('pdf', f);
+  const fd = new FormData(); fd.append('file', f);
   const r = await (await fetch('/api/upload', {method:'POST', body:fd})).json();
   e.target.value = '';
   if (r.error) { alert(r.error); return; }

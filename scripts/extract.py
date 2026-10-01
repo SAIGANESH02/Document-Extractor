@@ -2,6 +2,7 @@
 The pipeline in one command: document in, answer-key-shaped JSON out.
 
     python scripts/extract.py doc4.pdf                 # render the PDF, run every page
+    python scripts/extract.py sheet.png                # an image works too (PNG / JPG / TIFF)
     python scripts/extract.py --page 3                 # an already-rendered page
     python scripts/extract.py --page 1 --fresh         # ignore all cached results
     python scripts/extract.py --page 1 --d-model claude-sonnet-5
@@ -25,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipeline import tables as T  # noqa: E402
 from pipeline.models import DEFAULT_FLAGSHIP, DEFAULT_LIGHT_PAIR  # noqa: E402
-from pipeline.render import render_pdf  # noqa: E402
+from pipeline.render import ingest  # noqa: E402
 from pipeline.run import RunConfig, run  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "out"
@@ -70,7 +71,7 @@ def run_page(page: int, cfg: RunConfig, fresh: bool, document_id: int | None, qu
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("pdf", nargs="?", help="PDF to render and run (every page)")
+    ap.add_argument("pdf", nargs="?", help="PDF or PNG/JPG/TIFF to ingest and run (every page)")
     ap.add_argument("--page", type=int, nargs="+", help="already-rendered page number(s)")
     ap.add_argument("--fresh", action="store_true", help="ignore cached results for every layer")
     ap.add_argument("--b-model", default="")
@@ -85,7 +86,7 @@ def main() -> None:
 
     pages = list(a.page or [])
     if a.pdf:
-        for m in render_pdf(a.pdf):
+        for m in ingest(a.pdf):
             print(f"rendered page{m['page']}: {m['width']}×{m['height']} ({m['method']}), "
                   f"text layer {m['text_layer_chars']} chars")
             pages.append(m["page"])
