@@ -10,6 +10,7 @@ The pipeline in one command: document in, answer-key-shaped JSON out.
 
 Writes, per page, to out/page{N}/:
     answers.json    {"document_id": ..., "answers": {category: [values]}}  — the deliverable
+    unclassified.json  tag-like readings no rule claimed — where an unknown category shows up
     tables/         one CSV per table + tables.md (any sheet with tables)
     score.json      recall etc. when the sheet matches an answer key
     run.json        stage timings, model calls, cost
@@ -49,6 +50,7 @@ def run_page(page: int, cfg: RunConfig, fresh: bool, document_id: int | None, qu
     answers = {"document_id": doc_id if doc_id is not None else f"page{page}",
                "answers": summary.get("answers", {})}
     json.dump(answers, open(out / "answers.json", "w"), indent=2)
+    json.dump(summary.get("unclassified", []), open(out / "unclassified.json", "w"), indent=1)
     for tb in summary.get("tables", []):
         (out / "tables" / f"table{tb['index']}.csv").write_text(T.to_csv(tb))
     if summary.get("tables"):

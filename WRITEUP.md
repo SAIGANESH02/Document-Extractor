@@ -51,7 +51,7 @@ flowchart TD
 | B · Sheet context | Read the legend, system codes, drawing number; box the notes and title block | 1 vision call (Opus 5) | Each sheet defines its own symbols, so reading them at run time is how Doc 4 adapts |
 | C · Detector | Find every region with text | PaddleOCR (local CPU) | Can't invent text, so it's an honest check on what the AI skipped |
 | D · Tag reader | Per tile: text, symbol shape, what it's attached to, box | 1 vision call per tile (Opus 5) | Reports what it sees, never categories, so a new category never needs a new read |
-| T · Tables | Find tables, read each one cell by cell | 1 call to find + 1 per table (Sonnet 5) | One table per call at full resolution is the biggest accuracy lever |
+| T · Tables | Find tables, read each one cell by cell | 1 call to find (Opus 5) + 2 reads per table, voted (Sonnet 5 + Gemini Flash; Gemini Pro breaks ties) | One table per call at full resolution; two different readers catch each other's glyph mistakes |
 | E · Resolve | Map readings to answer categories | Python + `RULES.yaml` | Same input, same output; instant and free to re-run; every answer explainable |
 
 Around it: a scorer (recall against the key, precision as a lower bound, coverage, exact vs.
@@ -208,10 +208,19 @@ safety-related sheets — but you then own patching, access control and the mode
 cloud-hosted model in the customer's own account with no data retention gives much of the same
 protection without running GPUs; the right choice depends on the customer's contract.
 
-## Questions for you (the SMEs)
+## Working assumptions (built in; confirm with the SMEs live)
 
-1. **Is the U-bend loop what defines `pressure_control_valves (U-bend_pipe)`**, or how those valves happen to be drawn? Our only Doc 2 miss is here.
-2. **Is `instrument_bubbles` the set of prefix types** on the sheet (PI, TI, PCV) rather than instances?
-3. **Doc 2's demineralized-water connectors read `A`, `X`, `Y`, `Z 20350`; the key lists only `Z20350`.** Is the letter part of the connection's identity, and why only Z?
-4. **Do title-block and revision tables count as "every table on the sheet"?** We skip them today.
-5. **For Doc 4: which categories do you want?** We'll add or adjust rules for any we don't cover.
+| Open point | What the pipeline does | Why this is the safer choice |
+| --- | --- | --- |
+| What defines `pressure_control_valves (U-bend_pipe)` | A PCV whose stem reaches a U-bend loop in the pipe | The category is named after the U-bend; loosening the rule to catch Doc 2's one miss would be fitting to Doc 2 |
+| `instrument_bubbles` | The prefix types on the sheet (PI, TI, PCV), not instances | Matches Doc 1's key exactly |
+| Connector letters (`A/X/Y/Z 20350`) | Emit every connector with its letter | Keeps recall; extra values go to review instead of guessing why the key lists only Z |
+| Title-block and revision tables | **Read them too, labelled** (title block / revision / reference list; a setting turns this off) | For "every table exactly", a missing table fails and a labelled extra one costs cents |
+| Categories for Doc 4 | Every category we have rules for; the rule assistant proposes new ones from Doc 4's legend; `unclassified.json` lists tag-like readings no rule claimed | An unknown category still shows up somewhere to review live |
+
+**Tables are now read twice, by different models, and voted cell by cell.** Sonnet 5 and Gemini 3.8
+Flash each read every table; where they disagree, Gemini 3.1 Pro breaks the tie, and any cell still
+unsettled is flagged. One strong reader repeats its own glyph mistakes (Opus V→Y; Sonnet 1→I on one
+crop) while different models make different ones — on Doc 3 the vote gives **62/62 data cells**, for
+about $0.17 a sheet. Table boxes are now drawn by the strong model with wider margins, after one crop
+lost a column.

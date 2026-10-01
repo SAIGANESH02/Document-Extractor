@@ -71,6 +71,15 @@ class RunConfig:
     light_b: str = DEFAULT_LIGHT_PAIR[1]
     flagship: str = DEFAULT_FLAGSHIP
     model_t: str = ""
+    # "Reproduce every table on the sheet": a missing table fails that outright,
+    # an extra one clearly labelled costs cents. So title-block, revision and
+    # reference-list tables are read too, labelled by kind. Set False to skip.
+    include_admin_tables: bool = True
+    # Tables are read twice by different models and voted cell by cell; a third
+    # model breaks ties. Each misreads different glyphs (Opus V->Y, Sonnet 1->I
+    # on one crop), so two different readers catch what one strong reader repeats.
+    model_t2: str = "gemini-3.8-flash"
+    model_t3: str = "gemini-3.1-pro-preview"
 
     def __post_init__(self):
         self.model_b = self.model_b or os.environ.get("LAYER_B_MODEL") or DEFAULT_FLAGSHIP
@@ -291,7 +300,9 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
     if not has_key_for(cfg.model_t):
         put("T", status="blocked", note=f"no API key for {cfg.model_t}")
         return
-    path = CACHE / f"page{page}_tables__{_slug(cfg.model_t)}.json"
+    scope = "" if cfg.include_admin_tables else "--dataonly"
+    readers = "+".join(_slug(m) for m in (cfg.model_t, cfg.model_t2, cfg.model_t3) if m)
+    path = CACHE / f"page{page}_tables__{readers}{scope}--v3.json"
     if path.exists() and not force:
         blob = json.load(open(path))
         st = _stamp(path)
@@ -304,26 +315,34 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
     t = time.time()
     try:
         put("T", status="running", note="looking for tables")
-        found = T.find_tables(img, cfg.model_t)
+        # Finding tables is a layout job like Layer B's: the strongest model
+        # draws the tightest boxes (Sonnet's once missed a whole column).
+        found = T.find_tables(img, cfg.model_b)
         # Title-block and revision tables are drawing administration, not sheet
         # content. The find prompt says so, but it is not always obeyed, so the
         # rule is enforced here using Layer B's zones. Whether they should count
         # as "every table on the sheet" is an open question for the SMEs.
         zones = [z["bbox"] for z in ctx.get("suppress_regions", []) if z.get("kind") in ADMIN_ZONES]
         inside = lambda b, z: z[0] <= (b[0] + b[2]) / 2 <= z[2] and z[1] <= (b[1] + b[3]) / 2 <= z[3]
-        skipped = [t for t in found if any(inside(t["bbox"], z) for z in zones)]
-        found = [t for t in found if t not in skipped]
-        if skipped:
-            put("T", status="running", note=f"skipped {len(skipped)} title-block table(s)",
-                data={"skipped_admin_tables": [t["title"] for t in skipped]})
+        for t in found:      # a "data" table sitting inside the title block is administration
+            if t.get("kind", "data") == "data" and any(inside(t["bbox"], z) for z in zones):
+                t["kind"] = "title_block"
+        if not cfg.include_admin_tables:
+            skipped = [t for t in found if t.get("kind", "data") != "data"]
+            found = [t for t in found if t.get("kind", "data") == "data"]
+            if skipped:
+                put("T", status="running", note=f"skipped {len(skipped)} title-block table(s)",
+                    data={"skipped_admin_tables": [t["title"] for t in skipped]})
         if not found:
             json.dump({"tables": [], "errors": []}, open(path, "w"))
             put("T", status="done", seconds=round(time.time() - t, 2), note="no tables on this sheet",
                 data={"tables": [], "cached": False})
             return
         put("T", status="running", note=f"reading 0/{len(found)} tables")
+        second = cfg.model_t2 if cfg.model_t2 and has_key_for(cfg.model_t2) else None
+        third = cfg.model_t3 if cfg.model_t3 and has_key_for(cfg.model_t3) else None
         tables, errors = T.read_tables(
-            img, found, cfg.model_t,
+            img, found, cfg.model_t, second=second, tiebreak=third,
             on_progress=lambda d, n: put("T", status="running", note=f"reading {d}/{n} tables",
                                          data={"progress": d / n}))
     except Exception as exc:  # noqa: BLE001
@@ -337,11 +356,34 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
     (outdir / "tables.md").write_text("\n".join(T.to_markdown(tb) for tb in tables))
     out["tables"] = tables
     shrunk = sum(1 for tb in tables if tb["read_scale"] < 1)
+    disputed = sum(len(tb.get("disputed", [])) for tb in tables)
     put("T", status="error" if errors else "done", seconds=round(time.time() - t, 2),
         note=f"{len(tables)}/{len(found)} table(s) read"
              + (f" · {shrunk} read below native size" if shrunk else "")
+             + (f" · {disputed} cell(s) disputed — check them" if disputed else " · readers agree")
              + (f" · {len(errors)} failed" if errors else ""),
         data={"tables": tables, "errors": errors, "cached": False})
+
+
+# Pipe labels, prose annotations and "other" are not where a missing equipment
+# category hides; leaving them out keeps the list short enough to read live.
+NOT_EQUIPMENT = {"annotation", "line_label", "other"}
+
+
+def _taglike_unclaimed(unclaimed: list[dict]) -> list[dict]:
+    """Readings no rule claimed that look like equipment tags. On an unseen
+    sheet this is where a category we have no rule for shows up, so it is
+    written out beside the answers instead of being lost."""
+    from pipeline.review import _TAGLIKE
+    seen, out = set(), []
+    for o in unclaimed:
+        t = " ".join(str(o.get("text", "")).split())
+        if (o.get("kind") not in NOT_EQUIPMENT and _TAGLIKE.match(t)
+                and t.upper() not in seen and not t.replace(" ", "").isdigit()):
+            seen.add(t.upper())
+            out.append({"text": t, "kind": o.get("kind"), "symbol": o.get("symbol"),
+                        "attached_to": o.get("attached_to"), "bbox": o.get("bbox")})
+    return sorted(out, key=lambda o: (str(o["kind"]), o["text"]))
 
 
 # ---- the run -------------------------------------------------------------------
@@ -508,6 +550,7 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
         "provenance": resolved.get("provenance", {}),
         "audit": resolved.get("audit", {}),
         "unclaimed": resolved.get("unclaimed_count"),
+        "unclassified": _taglike_unclaimed(resolved.get("unclaimed", [])),
         "score": scored,
         "coverage": cov,
         "coverage_note": (
@@ -525,7 +568,8 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
     # Provenance, suppress zones, tables and per-call stats are dropped from the
     # stored copy so a history of runs stays small enough to keep forever.
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    record = {k: v for k, v in summary.items() if k not in ("provenance", "suppress_regions", "tables")}
+    record = {k: v for k, v in summary.items()
+              if k not in ("provenance", "suppress_regions", "tables", "unclassified")}
     record["stats"] = {k: v for k, v in final_stats.items() if k != "calls"}
     record["run_at"] = stamp
     record["model"] = cfg.d_label()

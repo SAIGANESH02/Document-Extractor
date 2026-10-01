@@ -28,8 +28,8 @@ is the headline, precision is a lower bound, and extra values go to a review que
 | GPT-5.5 | 87.9% | 75% | $10.49 |
 | Cascade (2 cheap readers + judge) | 93.9% | 50% | $3.53 |
 
-**Recommended:** Opus 5 for tags; Sonnet 5 for tables (62/62 on two reads — Opus read `V523` as
-`Y523`); Opus 5 for the legend. About $3–6 per sheet; Gemini Flash does ~94% of the tag job at 1/20th the cost.
+**Recommended:** Opus 5 for tags; tables read twice (Sonnet 5 + Gemini Flash) and voted cell by cell, Gemini Pro breaking ties —
+62/62 on Doc 3 (one reader repeats its mistakes: Opus read `V523` as `Y523`); Opus 5 for the legend. About $3–6 per sheet; Gemini Flash does ~94% of the tag job at 1/20th the cost.
 
 ## Tried and rejected · known failure modes
 
@@ -47,9 +47,10 @@ Few-shot symbol images in the tag reader's prompt → read digital PDFs' text la
 labelled set from review decisions → a self-hosted model behind the existing interface (drawings stay
 on the customer's network) → fine-tune only tag reading and symbol types; categories stay in rules.
 
-## Questions for you (the SMEs)
+## Working assumptions (confirm with the SMEs live)
 
-1. Is the U-bend loop what defines `pressure_control_valves (U-bend_pipe)`?
-2. Is `instrument_bubbles` the prefix types on the sheet, not instances?
-3. Doc 2's connectors read `A/X/Y/Z 20350`; the key lists only `Z20350` — why only Z?
-4. Do title-block tables count as "every table"? And which categories do you want for Doc 4?
+1. The U-bend PCV category is defined by the drawn U-bend — its name says so; loosening it to catch Doc 2's one miss would be fitting to Doc 2.
+2. `instrument_bubbles` = prefix types (PI, TI, PCV) — matches Doc 1's key.
+3. Every demineralized-water connector is emitted with its letter (`A/X/Y/Z 20350`) rather than guessing why the key lists only Z.
+4. Title-block and revision tables are read too, labelled — a missing table fails "every table".
+5. Doc 4 categories: the rule assistant proposes new rules; `unclassified.json` lists tag-like readings no rule claimed.

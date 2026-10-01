@@ -681,10 +681,17 @@ function renderTables(){
   }
   $('#tablesList').innerHTML = tablesData.map((t, i) => {
     const h = t.header_rows ?? 1;
-    const grid = t.rows.map((r, ri) => `<tr${ri < h ? ' class="h"' : ''}>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+    const dis = {};
+    for (const d of (t.disputed || [])) dis[d.row + ',' + d.col] = d.readings;
+    const grid = t.rows.map((r, ri) => `<tr${ri < h ? ' class="h"' : ''}>${r.map((c, ci) => {
+      const d = dis[ri + ',' + ci];
+      return d ? `<td class="dispute" title="readers disagree: ${esc(d.join(' | '))}">${esc(c)}</td>` : `<td>${esc(c)}</td>`;
+    }).join('')}</tr>`).join('');
     return `<div class="tbl" data-i="${i}">
-      <h4>${esc(t.title || 'Table '+(t.index+1))}</h4>
-      <div class="hint">${t.n_rows} rows × ${t.n_cols} cols · ${t.read_scale < 1 ? `<span style="color:var(--warn)">read at ${Math.round(t.read_scale*100)}% size</span>` : 'read at full resolution'}
+      <h4>${esc(t.title || 'Table '+(t.index+1))}${t.kind && t.kind !== 'data'
+        ? ` <span class="hint" title="Drawing administration, included in case it counts as a table on the sheet">· ${esc(t.kind.replace('_',' '))}</span>` : ''}</h4>
+      <div class="hint">${(t.readers||[]).length > 1 ? `read by ${t.readers.map(esc).join(' + ')} · ${
+          (t.disputed||[]).length ? `<span style="color:var(--warn)">${t.disputed.length} disputed cell(s) — hover the orange cells</span>` : 'all readers agree'} · ` : ''}${t.n_rows} rows × ${t.n_cols} cols · ${t.read_scale < 1 ? `<span style="color:var(--warn)">read at ${Math.round(t.read_scale*100)}% size</span>` : 'read at full resolution'}
         · <a href="/api/tables/${page}/${t.index}.csv">CSV</a></div>
       <div class="grid"><table>${grid}</table></div>
       ${t.notes ? `<div class="hint" style="margin-top:5px">Model's notes: ${esc(t.notes)}</div>` : ''}
