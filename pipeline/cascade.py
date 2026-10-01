@@ -290,8 +290,15 @@ def run(
         fb = ex.submit(observe_page, page, tiles, ctx, prog(light_b), light_b, None, "light B")
         obs_a, usage_a = fa.result()
         obs_b, usage_b = fb.result()
-    report["cost"][light_a] = cost(light_a, usage_a)
-    report["cost"][light_b] = cost(light_b, usage_b)
+    def add_cost(model, usage):
+        # Accumulate: a model can be both a light reader and the flagship, and
+        # assigning instead of adding silently dropped the reader's cost.
+        c = cost(model, usage)
+        prev = report["cost"].get(model, 0.0)
+        report["cost"][model] = None if c is None or prev is None else prev + c
+
+    add_cost(light_a, usage_a)
+    add_cost(light_b, usage_b)
     report["stages"].append({"stage": "light", "seconds": round(time.time() - t0, 1),
                              "models": [light_a, light_b],
                              "observations": {light_a: len(obs_a), light_b: len(obs_b)},
@@ -347,7 +354,7 @@ def run(
                         tot["error_messages"].append(m)
                 if on_progress:
                     on_progress(flagship, done, len(futs), len(rulings))
-        report["cost"][flagship] = cost(flagship, tot)
+        add_cost(flagship, tot)
         report["stages"].append({"stage": "adjudicate",
                                  "seconds": round(time.time() - t1, 1),
                                  "models": [flagship], "calls": len(chunks),

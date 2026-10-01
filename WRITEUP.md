@@ -43,8 +43,9 @@ run on Sonnet 5. Title-block and revision tables are excluded on purpose (open q
 
 **Tried and rejected.** Tesseract (zero tags found). Whole-page vision calls (downscaling destroys
 tags). Routing to a bigger model on the model's own confidence (correct and junk readings both sit
-near 0.88). A two-cheap-readers + flagship cascade: as run it cost more than Opus alone and scored
-lower, but a Gemini box-scale bug (now fixed) broke its pairing, so it is unproven, not rejected. PaddleOCR's fast mobile detector (11× faster, missed answer-key hexagons). A tight
+near 0.88). A two-cheap-readers + flagship cascade (escalate only where the readers disagree): the
+readers agreed on only ~42% of readings, so most went to the flagship — it cost the sum of all three
+models and scored no better than Gemini Flash alone ($3.53 vs $0.40, same recall). PaddleOCR's fast mobile detector (11× faster, missed answer-key hexagons). A tight
 "looks like a tag" filter in the cascade (silently deleted real values). Self-hosting an open
 vision model (setup and demo risk outweighed a benefit the brief does not grade; kept possible
 behind one `ask_json` interface).
