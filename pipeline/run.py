@@ -364,12 +364,12 @@ def _layer_t(page: int, img: Image.Image, cfg: RunConfig, force: bool, ctx: dict
         # as "every table on the sheet" is an open question for the SMEs.
         zones = [z["bbox"] for z in ctx.get("suppress_regions", []) if z.get("kind") in ADMIN_ZONES]
         inside = lambda b, z: z[0] <= (b[0] + b[2]) / 2 <= z[2] and z[1] <= (b[1] + b[3]) / 2 <= z[3]
-        for t in found:      # a "data" table sitting inside the title block is administration
-            if t.get("kind", "data") == "data" and any(inside(t["bbox"], z) for z in zones):
-                t["kind"] = "title_block"
+        for tb in found:     # a "data" table sitting inside the title block is administration
+            if tb.get("kind", "data") == "data" and any(inside(tb["bbox"], z) for z in zones):
+                tb["kind"] = "title_block"
         if not cfg.include_admin_tables:
-            skipped = [t for t in found if t.get("kind", "data") != "data"]
-            found = [t for t in found if t.get("kind", "data") == "data"]
+            skipped = [tb for tb in found if tb.get("kind", "data") != "data"]
+            found = [tb for tb in found if tb.get("kind", "data") == "data"]
             if skipped:
                 put("T", status="running", note=f"skipped {len(skipped)} title-block table(s)",
                     data={"skipped_admin_tables": [t["title"] for t in skipped]})
