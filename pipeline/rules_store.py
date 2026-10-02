@@ -43,6 +43,9 @@ HEADER = """\
 #              split    -> split text on / | , and spaces; emit each token
 #                          (keep_legend_codes: only codes the sheet's legend defines)
 #              const    -> the literal `value`
+#              connector_label -> connector id + its description, label removed
+#                          ("REACTOR COOLANT RC-E-1 20845 J INNER SEAL" -> "J20845 RC-E-1 INNER SEAL";
+#                          `strip` = the label regex, `id_field` = where the id is read)
 #              connector_id -> off-page connector id: flag letter + line number
 #                          ("20845 J" or "J 20845" -> J20845; no letter -> 20845)
 #              template -> `template` with {text} and {name}, where {name} is

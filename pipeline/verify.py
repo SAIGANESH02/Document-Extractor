@@ -213,9 +213,10 @@ def read_flags(page: int, img: Image.Image, observations: list[dict], resolved: 
     jobs = []
     for cat in cats:
         for p in resolved.get("provenance", {}).get(cat, []):
-            v = str(p["value"])
-            if not v.isdigit():
+            m = re.match(r"(\d{4,6})\b(.*)$", str(p["value"]))
+            if not m:                      # already has a letter
                 continue
+            v, rest = m.group(1), m.group(2)
             cons = [o for o in observations if o.get("kind") == "continuation_connection"
                     and norm_tag(o.get("text", "")) == v]
             px, py = (p["bbox"][0] + p["bbox"][2]) / 2, (p["bbox"][1] + p["bbox"][3]) / 2
@@ -223,8 +224,8 @@ def read_flags(page: int, img: Image.Image, observations: list[dict], resolved: 
                       + abs((o["bbox"][1] + o["bbox"][3]) / 2 - py)) if cons else None
             box = con["bbox"] if con else p["bbox"]
             key = f"{cat}|{v}|{box[0] // 50}|{box[1] // 50}"
-            jobs.append((key, cat, v, box, p))
-    todo = [j for j in jobs if j[0] not in cache]
+            jobs.append((key, cat, v, box, p, rest))
+    todo = [j[:5] for j in jobs if j[0] not in cache]
     report["cached"] = len(jobs) - len(todo)
     if todo and not cache_only:
         img.load()
@@ -246,13 +247,13 @@ def read_flags(page: int, img: Image.Image, observations: list[dict], resolved: 
                 except Exception as exc:  # noqa: BLE001 — the bare number stays
                     report["errors"].append(f"{type(exc).__name__}: {exc}"[:160])
         json.dump(cache, open(path, "w"), indent=1)
-    for key, cat, v, box, p in jobs:
+    for key, cat, v, box, p, rest in jobs:
         letter = str(cache.get(key, {}).get("letter", "")).strip().upper()
         if len(letter) == 1 and letter.isalpha():
-            new = letter + v
+            old, new = str(p["value"]), letter + v + rest
             vals = resolved["answers"].get(cat, [])
-            if v in vals:
-                vals[vals.index(v)] = new
+            if old in vals:
+                vals[vals.index(old)] = new
             if new in vals and vals.count(new) > 1:
                 vals.remove(new)
             resolved["answers"][cat] = sorted(set(vals))

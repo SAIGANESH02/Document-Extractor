@@ -74,6 +74,15 @@ def _inside(bbox, region) -> bool:
     return region[0] <= cx <= region[2] and region[1] <= cy <= region[3]
 
 
+def _connector_desc(text: str, strip: str | None) -> str:
+    t = " ".join(str(text).split()).upper()
+    if strip:
+        t = re.sub(strip, " ", t, flags=re.I)
+    t = re.sub(r"\(\s*[A-Z]{1,2}\s*-\s*\d+\s*\)", " ", t)                    # grid ref "(D-8)"
+    t = re.sub(r"(?<![A-Z0-9-])[A-Z]\s+(\d{4,6})\b|\b\d{4,6}(\s+[A-Z](?![A-Z0-9]))?", " ", t)  # the id
+    return " ".join(t.split())
+
+
 def _connector_id(text: str) -> str | None:
     t = " ".join(str(text).split()).upper()
     m = re.search(r"(?<![A-Z0-9-])([A-Z])\s+(\d{4,6})\b", t)
@@ -176,6 +185,13 @@ def resolve(observations: list[dict], ctx: dict, rules: dict | None = None,
                 m = re.search(rule["pattern"], text, re.I)
                 if m:
                     add(cat, m.group(1), o, i)
+            elif mode == "connector_label":
+                # Connector id + what the connector is ("INNER SEAL", "LOOP 2"):
+                # the id from `id_field`, the description from the text with
+                # the category label (`strip`), the id and the grid ref removed.
+                cid = _connector_id(str(o.get(rule.get("id_field", "text"), "")))
+                if cid:
+                    add(cat, f"{cid} {_connector_desc(text, rule.get('strip'))}".strip(), o, i, check)
             elif mode == "connector_id":
                 # Off-page connector id = flag letter + line number. The letter
                 # may be read before ("L 20846") or after ("20845 J") the
