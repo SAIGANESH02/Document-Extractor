@@ -34,6 +34,17 @@ With the **visual check (Layer V)** — each PCV bubble cropped and asked "does 
 **Recommended:** Opus 5 for tags; tables read twice (Sonnet 5 + Gemini Flash) and voted cell by cell, Gemini Pro breaking ties —
 62/62 on Doc 3 (one reader repeats its mistakes: Opus read `V523` as `Y523`); Opus 5 for the legend. About $3–6 per sheet; Gemini Flash does ~94% of the tag job at 1/20th the cost.
 
+## Exam sheet (Doc 4)
+
+**`PID-1-WLD-LR20218` ran cold in 6.5 minutes for $3.78** — 15/15 tiles, 9 categories, including the
+requested `reactor_coolant`. Fixed first: the scan sat rotated on a portrait page and was read sideways
+at half resolution (now read at full resolution), and overflowing tiles were retried at full price (now
+split into quarters). `reactor_coolant` (11) = flag letter + line number + what it is — `J20845 RC-E-1
+INNER SEAL`, `K20845 RC-E-1 OUTER SEAL`, `L20841 RC-P-1A *2 SEAL`, `H20841 LOOP 1`; missing flag letters
+read visually for $0.04. Also: 54 valves; codes CS, NG, RC, SI, WLD; `P-338`; revision block and
+reference list. To check: `D20843` (D or O?), junk letters in the hexagon category, prefixed valves
+(`RC-V145`…) in `unclassified.json`.
+
 ## Tried and rejected · known failure modes
 
 **Rejected:** Tesseract (zero tags) · whole-page vision calls (tags shrunk) · escalating on the model's

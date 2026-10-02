@@ -217,6 +217,42 @@ safety-related sheets — but you then own patching, access control and the mode
 cloud-hosted model in the customer's own account with no data retention gives much of the same
 protection without running GPUs; the right choice depends on the customer's contract.
 
+## Exam sheet (Doc 4): `PID-1-WLD-LR20218`
+
+**The unseen sheet ran end to end in 6.5 minutes for $3.78 — all 15 tiles read, none failed, 9 categories —
+and the requested `reactor_coolant` category was added live for $0.04 more.** A scanned P&ID like
+Docs 1–2 (Seabrook waste-processing liquid drains, reactor coolant system).
+
+**Two bugs surfaced first, both fixed:**
+- *Rotated scan read at half resolution.* The PDF places the scan rotated 90° with margins on a portrait
+  page (68% coverage); the ingest step only accepted ≥90% and re-rendered the page — sideways, at half
+  resolution. Now a page with no text layer and an image covering ≥50% is read as the scan, at full resolution.
+- *Paying for retries that could not succeed.* At half resolution dense tiles overflowed the 32,000-token
+  output budget and were retried with the same budget, three times each. Now an overflowing tile is read
+  as four quarters, and overflowed calls' cost is recorded.
+
+| Category | Count | Examples |
+| --- | --- | --- |
+| `reactor_coolant` (requested live) | 11 | `J20845 RC-E-1 INNER SEAL`, `K20845 RC-E-1 OUTER SEAL`, `L20841 RC-P-1A *2 SEAL`, `H20841 LOOP 1` |
+| `valves` | 54 | `V110`, `V112`, `V113`, `V131` … |
+| `system_boundary_interfaces` | 5 | `CS`, `NG`, `RC`, `SI`, `WLD` (from the sheet's own legend) |
+| `instrument_bubbles` | 8 | `FE`, `FT`, `FV`, `LSH`, `LT`, `PI`, `PT`, `TE` |
+| `pressure_indicators` | 2 | `PI1410`, `PI1411` |
+| `vacuum_pumps` / `gas_cylinders` | 1 + 1 | `P-338`; `TK-55 REACTOR COOLANT DRAIN TANK` |
+| `continuation_connections (hexagon)` | 14 | `20219`, `20222` — plus junk (below) |
+| Tables | 2 | Revision block; reference-drawing list (no data tables on this sheet) |
+
+**How `reactor_coolant` was added live.** Built like Doc 2's `demineralized_water`: off-page connectors
+labelled REACTOR COOLANT, reported as **flag letter + line number + what the connector is**. One rule reads
+the label inside the connector (`REACTOR COOLANT RC-E-1 20845 J INNER SEAL` → `J20845 RC-E-1 INNER SEAL`);
+one reads a separate note pointing at a connector (`REACTOR COOLANT LOOP 2` → `G20842 LOOP 2`). Four loop
+connectors' flag letters were read visually on crops (H, G, D, J) for $0.04. The legend line, title block
+and equipment that only mentions reactor coolant are excluded; Docs 1–2 still score 100%.
+
+**To check or fix live:** `D20843` (D or O?); single letters `B`–`L` and `CC LOOP A` in the hexagon
+category (one rule edit: require a number); system-prefixed valves (`RC-V145`–`147`, `CS-V1162`–`1165`,
+`SI-V104`) sit in `unclassified.json` — do they count as `valves`?; coverage 64% vs Doc 1's 77%.
+
 ## Working assumptions (built in; confirm with the SMEs live)
 
 | Open point | What the pipeline does | Why this is the safer choice |
