@@ -229,7 +229,9 @@ rules:
     note: 'Same connectors when the REACTOR COOLANT label was read as a separate note pointing
       at the connector (''REACTOR COOLANT LOOP 2'' -> connector 20842); the flag letter was
       not read, so the number alone. Skipped when the note names the connector''s flag letter:
-      then the connector reading already carries the full id (avoids ''20846'' next to ''L20846'').'
+      then the connector reading already carries the full id (avoids ''20846'' next to ''L20846'').
+      read_flag_letter: the connector is cropped and its flag letter read visually (Layer V),
+      giving letter + number.'
     when:
       kind: annotation
       text: ^REACTOR\s+COOLANT
@@ -240,6 +242,7 @@ rules:
     pattern_field: attached_to
     pattern: connector\s+(\d{4,6})
     template: '{name}'
+    read_flag_letter: true
 
 normalise:
   strip: true

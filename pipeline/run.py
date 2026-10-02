@@ -604,10 +604,16 @@ def run(page: int, force: bool = False, cfg: RunConfig | None = None) -> Iterato
         try:
             from pipeline.resolve import resolve
             resolved = resolve(observations, ctx, rules_now, verdicts)
+            # Flag letters for bare-number connector ids (rules with read_flag_letter).
+            flag_note = ""
+            if any(r.get("read_flag_letter") for r in rules_now.get("rules", [])):
+                fr = Vf.read_flags(page, img, observations, resolved, rules_now, cfg.model_v, cfg.cache_only)
+                if fr["letters"] or fr["asked"] or fr["errors"]:
+                    flag_note = f" · {fr['letters']} flag letter(s) read ({fr['asked']} asked, {fr['cached']} cached)"
             a = resolved["audit"]
             yield emit("E", status="done", seconds=round(time.time() - t, 2),
                        note=(f"{len(resolved['answers'])} categories · {a['resolved']} kept "
-                             f"({a['suppressed']} suppressed, {a['duplicates']} dupes)"),
+                             f"({a['suppressed']} suppressed, {a['duplicates']} dupes)" + flag_note),
                        data=resolved)
         except Exception as exc:  # a bad RULES.yaml edit must name itself
             yield emit("E", status="error", note=str(exc)[:160])

@@ -171,3 +171,92 @@ def fallback(rule: dict, obs: dict) -> bool:
     vr = rule.get("verify") or {}
     return _match(obs, vr.get("fallback_when")) and not (
         vr.get("fallback_unless") and _any(obs, vr.get("fallback_unless")))
+
+
+# ---- reading a connector's flag letter ------------------------------------------
+# Some connector ids come out as a bare line number because the flag letter in
+# the connector's arrow end was not read. A rule with `read_flag_letter: true`
+# sends each such connector (cropped, outlined) for one narrow read: the letter.
+
+FLAG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "letter": {"type": "string", "description": "The single letter in the connector's flag end, or empty if there is none"},
+        "evidence": {"type": "string", "description": "One sentence: where you see it"},
+    },
+    "required": ["letter", "evidence"],
+    "additionalProperties": False,
+}
+
+FLAG_SYSTEM = """You read one off-page continuation connector on a scanned P&ID.
+The connector is outlined with a RED rectangle: a box with the line number,
+with a pointed flag or arrow end that usually holds one capital letter.
+Report only that letter, exactly as printed. If no letter is printed, return
+an empty string — never guess."""
+
+
+def _flag_cache(page: int, model: str) -> Path:
+    slug = "".join(c if c.isalnum() or c in "-." else "-" for c in model)
+    return CACHE / f"page{page}_flags__{slug}.json"
+
+
+def read_flags(page: int, img: Image.Image, observations: list[dict], resolved: dict, rules: dict,
+               model: str, cache_only: bool = False) -> dict:
+    """Give bare-number connector values their flag letter. Mutates `resolved`
+    (answers + provenance) and returns a short report."""
+    cats = {r["category"] for r in rules.get("rules", []) if r.get("read_flag_letter")}
+    report = {"asked": 0, "cached": 0, "letters": 0, "errors": []}
+    if not cats:
+        return report
+    path = _flag_cache(page, model)
+    cache = json.load(open(path)) if path.exists() else {}
+    jobs = []
+    for cat in cats:
+        for p in resolved.get("provenance", {}).get(cat, []):
+            v = str(p["value"])
+            if not v.isdigit():
+                continue
+            cons = [o for o in observations if o.get("kind") == "continuation_connection"
+                    and norm_tag(o.get("text", "")) == v]
+            px, py = (p["bbox"][0] + p["bbox"][2]) / 2, (p["bbox"][1] + p["bbox"][3]) / 2
+            con = min(cons, key=lambda o: abs((o["bbox"][0] + o["bbox"][2]) / 2 - px)
+                      + abs((o["bbox"][1] + o["bbox"][3]) / 2 - py)) if cons else None
+            box = con["bbox"] if con else p["bbox"]
+            key = f"{cat}|{v}|{box[0] // 50}|{box[1] // 50}"
+            jobs.append((key, cat, v, box, p))
+    todo = [j for j in jobs if j[0] not in cache]
+    report["cached"] = len(jobs) - len(todo)
+    if todo and not cache_only:
+        img.load()
+
+        def ask(job):
+            key, cat, v, box, _ = job
+            crop = _crop(img, box)
+            data, _ = ask_json(crop, f"Line number on the outlined connector: {v}. Which letter is in its flag end?",
+                               FLAG_SCHEMA, max_tokens=3000, effort="medium", system=FLAG_SYSTEM, model=model,
+                               tag={"layer": "V", "role": "flag letter", "tile": v})
+            return key, {**data, "value": v, "bbox": box, "model": model}
+
+        with cf.ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+            for fut in cf.as_completed([ex.submit(ask, j) for j in todo]):
+                try:
+                    k, res = fut.result()
+                    cache[k] = res
+                    report["asked"] += 1
+                except Exception as exc:  # noqa: BLE001 — the bare number stays
+                    report["errors"].append(f"{type(exc).__name__}: {exc}"[:160])
+        json.dump(cache, open(path, "w"), indent=1)
+    for key, cat, v, box, p in jobs:
+        letter = str(cache.get(key, {}).get("letter", "")).strip().upper()
+        if len(letter) == 1 and letter.isalpha():
+            new = letter + v
+            vals = resolved["answers"].get(cat, [])
+            if v in vals:
+                vals[vals.index(v)] = new
+            if new in vals and vals.count(new) > 1:
+                vals.remove(new)
+            resolved["answers"][cat] = sorted(set(vals))
+            p["value"] = new
+            p["flag_letter"] = {"letter": letter, "evidence": cache[key].get("evidence"), "model": model}
+            report["letters"] += 1
+    return report

@@ -361,6 +361,8 @@ function selectAnswer(cat, i, el){
       <dt>symbol</dt><dd style="font-size:11.5px">${esc(p.symbol || '')}</dd>
       <dt>read conf</dt><dd>${p.confidence?.toFixed(2) ?? '—'}</dd>
       <dt>rule</dt><dd>RULES.yaml #${p.rule}</dd>
+      ${p.flag_letter ? `<dt>flag letter</dt><dd><b>${esc(p.flag_letter.letter)}</b> · ${esc(p.flag_letter.evidence||'')}
+        <span class="hint">(${esc(p.flag_letter.model||'')})</span></dd>` : ''}
       ${p.visual_check ? `<dt>visual check</dt><dd><b>${esc(p.visual_check.answer)}</b> · ${esc(p.visual_check.evidence||'')}
         <span class="hint">(${esc(p.visual_check.model||'')})</span></dd>` : ''}
       <dt>page xy</dt><dd>${x0}, ${y0}</dd>
