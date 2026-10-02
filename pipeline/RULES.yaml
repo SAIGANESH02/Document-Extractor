@@ -18,6 +18,8 @@
 #              split    -> split text on / | , and spaces; emit each token
 #                          (keep_legend_codes: only codes the sheet's legend defines)
 #              const    -> the literal `value`
+#              connector_id -> off-page connector id: flag letter + line number
+#                          ("20845 J" or "J 20845" -> J20845; no letter -> 20845)
 #              template -> `template` with {text} and {name}, where {name} is
 #                          group 1 of `pattern` searched in `pattern_field`
 #   min_conf : drop observations below this read confidence
@@ -211,6 +213,33 @@ rules:
       text: ^\d+(/\d+)?"?\s*-\s*T$
     emit: capture
     pattern: ^(.+)$
+
+  - category: reactor_coolant
+    source: requested category (live session, Doc 4)
+    note: Off-page connector labelled REACTOR COOLANT, as connector id (flag letter + line number),
+      the same form as Doc 2's demineralized_water key ('Z20350'). E.g. 'REACTOR COOLANT RC-E-1
+      20845 J' -> J20845.
+    when:
+      kind: continuation_connection
+      text: REACTOR\s+COOLANT
+    emit: connector_id
+
+  - category: reactor_coolant
+    source: requested category (live session, Doc 4)
+    note: 'Same connectors when the REACTOR COOLANT label was read as a separate note pointing
+      at the connector (''REACTOR COOLANT LOOP 2'' -> connector 20842); the flag letter was
+      not read, so the number alone. Skipped when the note names the connector''s flag letter:
+      then the connector reading already carries the full id (avoids ''20846'' next to ''L20846'').'
+    when:
+      kind: annotation
+      text: ^REACTOR\s+COOLANT
+      attached_to: connector\s+\d{4,6}
+    unless:
+      attached_to: flag\s+[A-Z]\b
+    emit: template
+    pattern_field: attached_to
+    pattern: connector\s+(\d{4,6})
+    template: '{name}'
 
 normalise:
   strip: true

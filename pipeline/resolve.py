@@ -74,6 +74,18 @@ def _inside(bbox, region) -> bool:
     return region[0] <= cx <= region[2] and region[1] <= cy <= region[3]
 
 
+def _connector_id(text: str) -> str | None:
+    t = " ".join(str(text).split()).upper()
+    m = re.search(r"(?<![A-Z0-9-])([A-Z])\s+(\d{4,6})\b", t)
+    if m:
+        return m.group(1) + m.group(2)
+    m = re.search(r"\b(\d{4,6})\s+([A-Z])(?![A-Z0-9])", t)
+    if m:
+        return m.group(2) + m.group(1)
+    m = re.search(r"\b(\d{4,6})\b", t)
+    return m.group(1) if m else None
+
+
 def resolve(observations: list[dict], ctx: dict, rules: dict | None = None,
             verdicts: dict | None = None) -> dict:
     """`verdicts` are Layer V's visual yes/no answers for rules with a `verify`
@@ -164,6 +176,13 @@ def resolve(observations: list[dict], ctx: dict, rules: dict | None = None,
                 m = re.search(rule["pattern"], text, re.I)
                 if m:
                     add(cat, m.group(1), o, i)
+            elif mode == "connector_id":
+                # Off-page connector id = flag letter + line number. The letter
+                # may be read before ("L 20846") or after ("20845 J") the
+                # number; with no letter read, the number alone.
+                cid = _connector_id(text)
+                if cid:
+                    add(cat, cid, o, i, check)
             elif mode == "template":
                 # Builds a value from two fields, e.g. an equipment name the
                 # model reported in `attached_to` plus the tag in `text`.

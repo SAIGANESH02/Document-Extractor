@@ -43,6 +43,8 @@ HEADER = """\
 #              split    -> split text on / | , and spaces; emit each token
 #                          (keep_legend_codes: only codes the sheet's legend defines)
 #              const    -> the literal `value`
+#              connector_id -> off-page connector id: flag letter + line number
+#                          ("20845 J" or "J 20845" -> J20845; no letter -> 20845)
 #              template -> `template` with {text} and {name}, where {name} is
 #                          group 1 of `pattern` searched in `pattern_field`
 #   min_conf : drop observations below this read confidence
