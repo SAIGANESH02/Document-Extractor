@@ -41,9 +41,9 @@ requested `reactor_coolant`. Fixed first: the scan sat rotated on a portrait pag
 at half resolution (now read at full resolution), and overflowing tiles were retried at full price (now
 split into quarters). `reactor_coolant` (11) = flag letter + line number + what it is — `J20845 RC-E-1
 INNER SEAL`, `K20845 RC-E-1 OUTER SEAL`, `L20841 RC-P-1A *2 SEAL`, `H20841 LOOP 1`; missing flag letters
-read visually for $0.04. Also: 54 valves; codes CS, NG, RC, SI, WLD; `P-338`; revision block and
-reference list. To check: `D20843` (D or O?), junk letters in the hexagon category, prefixed valves
-(`RC-V145`…) in `unclassified.json`.
+read visually for $0.04. Also: 72 valves (13 system-prefixed, after an accepted rule-assistant change); codes CS, NG, RC, SI, WLD; `P-338`; revision block and
+reference list. To check: `D20843` (D or O?), `P-338` (likely `P-33B`), junk letters in the hexagon
+category.
 
 ## Tried and rejected · known failure modes
 

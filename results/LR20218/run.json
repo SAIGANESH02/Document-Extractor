@@ -21,7 +21,7 @@
   "suppressed": 105,
   "duplicates": 108,
   "resolved": 508,
-  "unclaimed": 365
+  "unclaimed": 347
  },
  "coverage": 0.642,
  "stats": {
@@ -34,6 +34,6 @@
    "D": 3.5904850000000006,
    "T": 0.1234
   },
-  "wall_seconds": 0.54
+  "wall_seconds": 0.49
  }
 }

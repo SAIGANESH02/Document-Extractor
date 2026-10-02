@@ -234,7 +234,7 @@ Docs 1–2 (Seabrook waste-processing liquid drains, reactor coolant system).
 | Category | Count | Examples |
 | --- | --- | --- |
 | `reactor_coolant` (requested live) | 11 | `J20845 RC-E-1 INNER SEAL`, `K20845 RC-E-1 OUTER SEAL`, `L20841 RC-P-1A *2 SEAL`, `H20841 LOOP 1` |
-| `valves` | 54 | `V110`, `V112`, `V113`, `V131` … |
+| `valves` | 72 | `V110`, `V112` … and 13 system-prefixed: `RC-V145`, `CS-V1163`, `SI-V104` … |
 | `system_boundary_interfaces` | 5 | `CS`, `NG`, `RC`, `SI`, `WLD` (from the sheet's own legend) |
 | `instrument_bubbles` | 8 | `FE`, `FT`, `FV`, `LSH`, `LT`, `PI`, `PT`, `TE` |
 | `pressure_indicators` | 2 | `PI1410`, `PI1411` |
@@ -250,8 +250,9 @@ connectors' flag letters were read visually on crops (H, G, D, J) for $0.04. The
 and equipment that only mentions reactor coolant are excluded; Docs 1–2 still score 100%.
 
 **To check or fix live:** `D20843` (D or O?); single letters `B`–`L` and `CC LOOP A` in the hexagon
-category (one rule edit: require a number); system-prefixed valves (`RC-V145`–`147`, `CS-V1162`–`1165`,
-`SI-V104`) sit in `unclassified.json` — do they count as `valves`?; coverage 64% vs Doc 1's 77%.
+category (one rule edit: require a number); `P-338` is probably `P-33B` (8/B); system-prefixed valves
+(`RC-V145`, `CS-V1163` …) are now counted after a rule-assistant change accepted in review (72 valves;
+Docs 1–2 still 100%) — confirm they belong in `valves`; coverage 64% vs Doc 1's 77%.
 
 ## Working assumptions (built in; confirm with the SMEs live)
 
