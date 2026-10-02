@@ -1,0 +1,39 @@
+{
+ "config": {
+  "model_b": "claude-opus-5",
+  "d_mode": "single",
+  "model_d": "claude-opus-5",
+  "light_a": "claude-sonnet-5",
+  "light_b": "gemini-3.8-flash",
+  "flagship": "claude-opus-5",
+  "model_t": "claude-sonnet-5",
+  "include_admin_tables": true,
+  "model_t2": "gemini-3.8-flash",
+  "model_t3": "gemini-3.1-pro-preview",
+  "cache_only": false,
+  "model_v": "claude-opus-5"
+ },
+ "sheet_id": "PID-1-WLD-LR20218",
+ "observations": 723,
+ "audit": {
+  "input": 723,
+  "low_confidence": 2,
+  "suppressed": 105,
+  "duplicates": 108,
+  "resolved": 508,
+  "unclaimed": 365
+ },
+ "coverage": 0.642,
+ "stats": {
+  "layers": {},
+  "total_cost": 0,
+  "total_calls": 0,
+  "unpriced_calls": 0,
+  "cached_layers": {
+   "B": 0.066195,
+   "D": 3.5904850000000006,
+   "T": 0.1234
+  },
+  "wall_seconds": 0.54
+ }
+}

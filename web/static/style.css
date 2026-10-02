@@ -4,9 +4,12 @@
   --warn:#ffb454; --bad:#ff6b6b; --pending:#555c6b;
 }
 @media (prefers-color-scheme:light){
-  :root{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--line:#dfe3ea;
-        --fg:#11151c;--dim:#61697a;--pending:#b9c0cc;}
+  :root:not([data-theme="dark"]){--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--line:#dfe3ea;
+        --fg:#11151c;--dim:#61697a;--pending:#b9c0cc;color-scheme:light}
 }
+:root[data-theme="light"]{--bg:#f6f7f9;--panel:#fff;--panel2:#eef1f5;--line:#dfe3ea;
+        --fg:#11151c;--dim:#61697a;--pending:#b9c0cc;color-scheme:light}
+:root{color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--fg);
@@ -208,3 +211,16 @@ button.mini{padding:1px 7px;font-size:11px;border-radius:5px}
 .rd .gone{color:var(--bad);text-decoration:line-through}
 .rd.hd{cursor:default;position:sticky;top:0;background:var(--panel);font-family:inherit}
 .tbl td.dispute{background:color-mix(in srgb,var(--warn) 30%,transparent);outline:1px solid var(--warn)}
+
+/* ---- narrow screens: drawing on top, panel below ---- */
+@media (max-width:760px){
+  html,body{overflow:auto;height:auto}
+  header{flex-wrap:wrap;gap:8px}
+  main{flex-direction:column}
+  #stage-wrap{height:62vh;flex:0 0 auto}
+  #splitter{display:none}
+  aside{width:auto!important;border-left:0;border-top:1px solid var(--line);min-height:70vh}
+  .par{min-width:0}
+  .par .pr{flex-wrap:wrap}
+  .statsbox{max-width:calc(100% - 24px)}
+}

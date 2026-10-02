@@ -1,4 +1,8 @@
 const $ = s => document.querySelector(s);
+// Where the page image and crops come from. The live viewer asks the server; a
+// static snapshot (scripts/export_static.py) supplies its own before this runs.
+const pageURL = window.__pageURL || (p => `/api/page/${p}.png`);
+const cropURL = window.__cropURL || (q => `/api/crop?${q}`);
 const esc = s => String(s).replace(/[<>&"]/g,
   c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 const cv = $('#cv'), ctx = cv.getContext('2d');
@@ -146,7 +150,7 @@ function finish(s){
 function loadImage(){
   img = new Image();
   img.onload = () => { fit(); draw(); };
-  img.src = `/api/page/${page}.png`;
+  img.src = pageURL(page);
 }
 
 /* ---------- view ---------- */
@@ -280,7 +284,7 @@ function select(i){
   const [x0,y0,x1,y1] = r.bbox;
   const q = `page=${page}&x0=${x0}&y0=${y0}&x1=${x1}&y1=${y1}`;
   $('#insp').innerHTML = `
-    <img id="crop" src="/api/crop?${q}" alt="native-resolution crop">
+    <img id="crop" src="${cropURL(q)}" alt="native-resolution crop">
     <dl class="kv">
       <dt>Layer C read</dt><dd class="read">${r.text ? esc(r.text) : '<span style="color:var(--dim)">detection only</span>'}</dd>
       <dt>Layer D read</dt><dd class="read">${d
@@ -353,7 +357,7 @@ function selectAnswer(cat, i, el){
   const [x0,y0,x1,y1] = p.bbox;
   const q = `page=${page}&x0=${x0}&y0=${y0}&x1=${x1}&y1=${y1}`;
   $('#insp').innerHTML = `
-    <img id="crop" src="/api/crop?${q}" alt="native-resolution crop">
+    <img id="crop" src="${cropURL(q)}" alt="native-resolution crop">
     <dl class="kv">
       <dt>value</dt><dd class="read">${esc(String(p.value))}</dd>
       <dt>category</dt><dd style="font-size:11.5px">${esc(cat)}</dd>
@@ -844,7 +848,7 @@ function renderReaders(){
   $('#rdList').querySelectorAll('.rd[data-i]').forEach(el => el.onclick = () => {
     const o = rows[+el.dataset.i]; hlBox = o.bbox; sel = -1; panTo(o.bbox); draw();
     const [x0,y0,x1,y1] = o.bbox, q = `page=${page}&x0=${x0}&y0=${y0}&x1=${x1}&y1=${y1}`;
-    $('#insp').innerHTML = `<img id="crop" src="/api/crop?${q}"><dl class="kv">
+    $('#insp').innerHTML = `<img id="crop" src="${cropURL(q)}"><dl class="kv">
       <dt>reader A</dt><dd class="read">${esc(o._claim_a ?? '—')}</dd>
       <dt>reader B</dt><dd class="read">${esc(o._claim_b ?? '—')}</dd>
       <dt>result</dt><dd class="read">${esc(o.text||'')}</dd>

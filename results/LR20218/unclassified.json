@@ -1,0 +1,314 @@
+[
+ {
+  "text": "VG",
+  "kind": "boundary_interface",
+  "symbol": "system break mark on horizontal line, label on right side",
+  "attached_to": "horizontal black 2\" line to VG system",
+  "bbox": [
+   2850,
+   358,
+   2878,
+   376
+  ]
+ },
+ {
+  "text": "WLD",
+  "kind": "boundary_interface",
+  "symbol": "system break mark (short bar with tick) on horizontal line, label on left side",
+  "attached_to": "horizontal black 2\" line to VG system",
+  "bbox": [
+   2787,
+   358,
+   2826,
+   376
+  ]
+ },
+ {
+  "text": "C 20450",
+  "kind": "continuation_connection",
+  "symbol": "elongated arrow/flag (pennant) connector box with divider, open point to the left",
+  "attached_to": "green pipe run entering from left edge of tile",
+  "bbox": [
+   3285,
+   2344,
+   3438,
+   2363
+  ]
+ },
+ {
+  "text": "D 20450",
+  "kind": "continuation_connection",
+  "symbol": "elongated arrow/flag (pennant) connector box with divider, open point to the left",
+  "attached_to": "green pipe run from left with arrowhead, labelled SI-2\"",
+  "bbox": [
+   3285,
+   2456,
+   3438,
+   2475
+  ]
+ },
+ {
+  "text": "VSL 20777",
+  "kind": "continuation_connection",
+  "symbol": "rectangular box, 'VSL' on top line and '20777' below, with letter flag 'G' and arrowhead at right",
+  "attached_to": "1/2\" T line with bowtie valve V232; flag letter 'G'",
+  "bbox": [
+   3132,
+   1146,
+   3182,
+   1180
+  ]
+ },
+ {
+  "text": "FISL 8336",
+  "kind": "instrument_bubble",
+  "symbol": "circle bubble with two text lines",
+  "attached_to": "two horizontal green sensing lines running right to the flow element at the main pipe",
+  "bbox": [
+   1383,
+   2470,
+   1454,
+   2536
+  ]
+ },
+ {
+  "text": "LSHH 1403",
+  "kind": "instrument_bubble",
+  "symbol": "circle bubble",
+  "attached_to": "dashed instrument line to TK-55 tank level connection",
+  "bbox": [
+   2182,
+   966,
+   2236,
+   1010
+  ]
+ },
+ {
+  "text": "PSHL 1501",
+  "kind": "instrument_bubble",
+  "symbol": "circle bubble",
+  "attached_to": "bottom of vertical black 3/4\" line below valve V180",
+  "bbox": [
+   2724,
+   554,
+   2772,
+   594
+  ]
+ },
+ {
+  "text": "X-32",
+  "kind": "instrument_bubble",
+  "symbol": "red oval/circle bubble with leader line to equipment",
+  "attached_to": "leader running down-right to the small red rectangular equipment box on the main line",
+  "bbox": [
+   505,
+   1147,
+   570,
+   1175
+  ]
+ },
+ {
+  "text": "CS-V1162",
+  "kind": "valve",
+  "symbol": "angled stem manual valve on horizontal line",
+  "attached_to": "horizontal green CS line to vertical RC line",
+  "bbox": [
+   2164,
+   676,
+   2244,
+   695
+  ]
+ },
+ {
+  "text": "CS-V1163",
+  "kind": "valve",
+  "symbol": "angled stem manual valve on horizontal line",
+  "attached_to": "horizontal green CS line entering CS/RC boundary diamond",
+  "bbox": [
+   2168,
+   488,
+   2248,
+   507
+  ]
+ },
+ {
+  "text": "CS-V1164",
+  "kind": "valve",
+  "symbol": "angled stem manual valve on horizontal line",
+  "attached_to": "horizontal green CS line to vertical RC line",
+  "bbox": [
+   2164,
+   585,
+   2244,
+   604
+  ]
+ },
+ {
+  "text": "CS-V1165",
+  "kind": "valve",
+  "symbol": "angled stem manual valve on horizontal line",
+  "attached_to": "horizontal green CS line to vertical RC line",
+  "bbox": [
+   2164,
+   780,
+   2246,
+   799
+  ]
+ },
+ {
+  "text": "CS-V526",
+  "kind": "valve",
+  "symbol": "text label beneath an in-line valve on the horizontal run",
+  "attached_to": "horizontal green pipe feeding the 20722 connector",
+  "bbox": [
+   2437,
+   1273,
+   2516,
+   1291
+  ]
+ },
+ {
+  "text": "RC-V142",
+  "kind": "valve",
+  "symbol": "bowtie valve drawn vertically (two filled triangles meeting), on vertical branch",
+  "attached_to": "red vertical branch line above the tell tail drain",
+  "bbox": [
+   1834,
+   347,
+   1907,
+   364
+  ]
+ },
+ {
+  "text": "RC-V144",
+  "kind": "valve",
+  "symbol": "bowtie/gate valve",
+  "attached_to": "RC-3\" horizontal green line",
+  "bbox": [
+   2902,
+   1907,
+   2966,
+   1925
+  ]
+ },
+ {
+  "text": "RC-V145",
+  "kind": "valve",
+  "symbol": "bowtie/gate valve, open (unfilled) body",
+  "attached_to": "red horizontal RC-3/4\" line",
+  "bbox": [
+   1544,
+   307,
+   1623,
+   323
+  ]
+ },
+ {
+  "text": "RC-V146",
+  "kind": "valve",
+  "symbol": "bowtie valve with filled triangles, followed by a filled triangle arrow on the same run",
+  "attached_to": "red horizontal line rising to join the upper RC-3/4\" run",
+  "bbox": [
+   1543,
+   425,
+   1624,
+   442
+  ]
+ },
+ {
+  "text": "RC-V147",
+  "kind": "valve",
+  "symbol": "bowtie valve body with stem and dome/diaphragm actuator on top",
+  "attached_to": "red horizontal line, downstream side turns green",
+  "bbox": [
+   1980,
+   306,
+   2061,
+   324
+  ]
+ },
+ {
+  "text": "RC-V310",
+  "kind": "valve",
+  "symbol": "angled stem valve symbol (hand/manual valve) on vertical green line",
+  "attached_to": "vertical green RC pipe run",
+  "bbox": [
+   2449,
+   342,
+   2517,
+   361
+  ]
+ },
+ {
+  "text": "RC-V484",
+  "kind": "valve",
+  "symbol": "bowtie/gate valve on vertical branch, capped end below",
+  "attached_to": "RC-1\u00bd\" vertical branch off the RC-3\" header",
+  "bbox": [
+   3134,
+   1945,
+   3214,
+   1963
+  ]
+ },
+ {
+  "text": "SI-V104",
+  "kind": "valve",
+  "symbol": "check-valve style symbol (diagonal flapper between two short bars) on horizontal line",
+  "attached_to": "horizontal green SI line",
+  "bbox": [
+   2900,
+   2374,
+   2948,
+   2389
+  ]
+ },
+ {
+  "text": "V115",
+  "kind": "valve",
+  "symbol": "text only, valve symbol cut off at top edge",
+  "attached_to": "vertical black/green stem at top of tile, symbol not visible",
+  "bbox": [
+   2312,
+   1062,
+   2355,
+   1072
+  ]
+ },
+ {
+  "text": "V213",
+  "kind": "valve",
+  "symbol": "red filled triangular/arrow valve body on a vertical stem (relief-type valve)",
+  "attached_to": "red 1 1/2\" vertical line rising to the green 2\" header",
+  "bbox": [
+   732,
+   996,
+   773,
+   1013
+  ]
+ },
+ {
+  "text": "V56",
+  "kind": "valve",
+  "symbol": "angle relief valve with spring stem",
+  "attached_to": "vertical green line branching to the 3\" WASTE PROCESS LIQUID DRAINS connector",
+  "bbox": [
+   2790,
+   1341,
+   2824,
+   1357
+  ]
+ },
+ {
+  "text": "V67",
+  "kind": "valve",
+  "symbol": "check-valve style symbol (diagonal flapper between two bars)",
+  "attached_to": "3\" horizontal green suction line",
+  "bbox": [
+   2234,
+   2629,
+   2266,
+   2644
+  ]
+ }
+]

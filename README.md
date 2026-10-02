@@ -66,3 +66,13 @@ web/        Flask server + static front end (index.html, app.js, style.css)
 scripts/    render_pdf.py, report.py, benchmark.py
 data/       generated: renders, caches, run records, uploads (gitignored)
 ```
+
+## Exam sheet results
+
+`results/LR20218/` holds the unseen exam sheet's outputs (answers, tables, unclassified readings, cost).
+`exports/LR20218/index.html` is a read-only snapshot of the viewer for that sheet — open it in a browser
+to click through every layer without running anything. Create one for any page with:
+
+```bash
+.venv/bin/python scripts/export_static.py --page 7 --out exports/<name>/index.html   # viewer must be running
+```
